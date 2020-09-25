@@ -5,6 +5,7 @@ import multiprocessing
 import subprocess
 from config import bucket_name_xml_file, bucket_name_zipped_file,file_path,bucket_name_xml_file
 
+# Use EC2 with memory larger than 500 GB
 
 def call_unzip_subproc(url):
     command = os.getcwd() +"/unzip.sh " + url
@@ -63,6 +64,7 @@ if __name__=="__main__":
         file_name=url_name.split('/')[-1][:-1] # get rid of \n
         xml_file_name="".join("".join(file_name.split('.')[-3:-1]).split('-')[-1])+".xml"
         if "stackoverflow.com-" in file_name:
+            # Use apply to block process
             pool.apply(transfer,(file_name,xml_file_name,url))
     pool.close()
     pool.join()
