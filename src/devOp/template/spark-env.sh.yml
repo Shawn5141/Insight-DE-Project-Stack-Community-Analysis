@@ -1,0 +1,6 @@
+#jinja2: trim_blocks: "true", lstrip_blocks: "false"
+#version: "3.5"
+
+export SPARK_MASTER_HOST={{Master[0].private_ip}}
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export PYSPARK_PYTHON=python3

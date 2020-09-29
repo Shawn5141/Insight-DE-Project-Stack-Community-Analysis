@@ -2,18 +2,13 @@
 localhost
 
 [master]
-ubuntu@ec2-34-213-232-218.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
+ubuntu@ec2-44-235-91-5.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
 
-[worker1]
-ubuntu@ec2-18-237-132-230.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
 
-[worker2]
-ubuntu@ec2-18-237-16-77.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
+[largerworker]
+ubuntu@ec2-44-235-91-5.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
+ubuntu@ec2-44-233-199-5.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
+ubuntu@ec2-44-234-21-142.us-west-2.compute.amazonaws.com    ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
 
-[worker3]
-ubuntu@ec2-34-215-204-148.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
-
-[worker]
-ubuntu@ec2-18-237-132-230.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
-ubuntu@ec2-18-237-16-77.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
-ubuntu@ec2-34-215-204-148.us-west-2.compute.amazonaws.com   ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
+[worker4]
+ubuntu@ec2-44-234-109-73.us-west-2.compute.amazonaws.com    ansible_ssh_private_key_file=~/.ssh/Shou-En-te.pem
