@@ -35,18 +35,21 @@ def TagDownload(spark):
         'TargetTagName',
         'Id'))
     TagSynMapping = TagSyn.select(explode(TagSyn.MAPPING))
-    #TagSynMapping.show()
+    
+    TagSynMapping=SupplementTags2(spark,TagSynMapping,TagName)
+    
     mapping  = {entry[0]:entry[1] for entry in TagSynMapping.collect()}
-    #TagName.show()
-    TagName = TagName.collect()
-    
-    #
-    return SupplementTags(mapping,TagName)
+    return mapping
     """
-    
+    synonyms table
     +---------------+-----+                                                                                                                     |            key|value|                                                                                                                     +---------------+-----+                                                                                                                     |  windows-forms|    3|                                                                                                                     |       winforms|    3|
     +---------------+-----+
     """
+    #TagName.show()
+    #TagName = TagName.collect()
+   
+    #return SupplementTags(mapping,TagName)
+   
 def working_fun(mapping_broadcasted):
     def f(x):
         tmp = []
@@ -90,3 +93,27 @@ def SupplementTags(TagSynMapping,TagName):
     #print("TagMap 1 size",len(TagSynMapping))
     return TagSynMapping
     
+def SupplementTags2(spark,TagSynMapping,TagName):
+    TagSynMapping = TagSynMapping.select(col("key").alias("TagName"),col("value").alias("id"))
+    TagName=TagName.drop('Count').withColumn("id", lit(None).cast(StringType())).select('*')
+    
+    result = TagSynMapping.union(TagName)
+    from pyspark.sql import Window
+    w = Window.partitionBy('TagName')
+    result=result.select('TagName', 'id', count('TagName').over(w).alias('n'))
+
+    result=result.dropDuplicates(subset=['TagName'])
+    #result.show()
+    mapping=result.groupBy(result.id).count().select('id', col('count').alias('n')).withColumn("id2", monotonically_increasing_id()).select('*')
+    #mapping.show()
+    def working_fun2(mapping):
+        def f(x):
+            return mapping.value.get(x)
+
+        return udf(f)
+    mapping = {entry[0]:entry[2] for entry in mapping.collect()}
+    b = spark.sparkContext.broadcast(mapping)
+    result=result.withColumn('new_id',when(col('id').isNotNull()  ,working_fun2(b)(col('id'))).otherwise(monotonically_increasing_id()))
+    result=result.drop('id','n')
+    result.show()
+    return result
