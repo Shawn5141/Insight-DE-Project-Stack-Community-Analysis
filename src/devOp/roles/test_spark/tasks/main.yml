@@ -1,0 +1,18 @@
+---
+
+- name: run start-all.sh
+  command:
+    cmd: /usr/local/spark/sbin/stop-all.sh
+    cmd: /usr/local/spark/sbin/start-all.sh
+
+- name: test spark is installed correctly
+  command:
+    cmd: /usr/local/spark/bin/run-example SparkPi 10
+
+#- name: test PySpark is working
+#  command:
+#    cmd: spark-submit /usr/local/spark/examples/src/main/python/pi.py 10  
+  
+- name: stop spark
+  command:
+    cmd: /usr/local/spark/sbin/stop-all.sh
