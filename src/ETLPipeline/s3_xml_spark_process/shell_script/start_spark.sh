@@ -5,9 +5,9 @@ spark-submit \
 --conf spark.driver.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true  \
 --jars spark-xml_2.11-0.6.0.jar \
 --driver-class-path /usr/local/spark/jars/postgresql-42.2.16.jar   --jars /usr/local/spark/jars/postgresql-42.2.16.jar \
---total-executor-cores 11 \
---executor-cores 4 \
+--total-executor-cores 13 \
+--executor-cores 5 \
 --executor-memory 10G \
 --driver-memory 2g \
---py-files xml_converter.py,dataModel.py,process_xml.py \
+--py-files xml_converter.py,dataModel.py,process_xml.py,TagPreprocessing.py \
 main.py

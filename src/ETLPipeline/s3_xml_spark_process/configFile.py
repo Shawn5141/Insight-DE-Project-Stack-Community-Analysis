@@ -38,7 +38,7 @@ class config:
         
         # stackoverflow-tag-synonyms-list
         self.TagName ='TagName.csv'
-        self.TagSyn = 'TagName.csv'
+        self.TagSyn = 'TagSyn.csv'
         self.TagNameLink = f's3a://{self.bucketTag}/{self.TagName}'
         self.TagSynLink = f's3a://{self.bucketTag}/{self.TagSyn}'
         # Postgres connection
