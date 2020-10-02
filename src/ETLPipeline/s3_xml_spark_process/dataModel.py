@@ -47,7 +47,14 @@ def createTable(cursor):
         print("================Something went wrong when creating the table==================", "\n")
         print(e)
 
-
+# def createIndex(cursor,IndexName,TableName,ColumnName):
+#     try:
+#         cursor.execute("CREATE INDEX {} ON {} ({})".format(IndexName,TableName,ColumnName))
+                       
+    
+                       
+#     except:
+#         pass
 def generateQuery(df):
     
 
@@ -78,6 +85,7 @@ def writeToJDBC(df,tableName,spark):
     mode= "overwrite"
     #print("jdbcURL: ",config.jdbcUrl,"\ntable Name :",tableName,"\nmode:",mode,"\nconnection property",config.connectionProperties,"\n")
     try:
+      
       df.write.jdbc(url=config.jdbcUrl, table=tableName, mode=mode, properties=config.connectionProperties)
       print("Inserting data into PostgreSQL...", "\n")
     except Exception as e:

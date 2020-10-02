@@ -1,11 +1,13 @@
+from pyspark.sql.functions import year, month, dayofmonth
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
+from pyspark.sql import Window
 from configFile import config
 import random
 import sys
 
 
-def Preprocess(df_Posts,spark):
+def Preprocess(spark,df_Posts):
     Posts,Answers =SeperateAndDrop(df_Posts)
     TagSynMapping=TagDownload(spark)
     b_TagSynMapping = Broadcast(spark,TagSynMapping)
@@ -15,11 +17,17 @@ def Preprocess(df_Posts,spark):
 
 def SeperateAndDrop(df_Posts):
     
-    columns_to_drop = ['LastEditorUserId','LastEditorDisplayName','Body']
+    columns_to_drop = ['LastEditorUserId','LastEditorDisplayName','Body','LastEditDate','LastActivityDate','Title']
     df_Posts = df_Posts.drop(*columns_to_drop)
-    Posts,Answers = df_Posts.filter(df_Posts.PostTypeId == 1),df_Posts.filter(df_Posts.PostTypeId == 2)
-    columns_to_drop_Posts,columns_to_drop_Answers =['PostTypeId','ParentId','CommentCount'], ['PostTypeId','AcceptedAnswerId','AnswerCount','FavoriteCount','Tags','Title','ViewCount']
-    return Posts.drop(*columns_to_drop_Posts),Answers.drop(*columns_to_drop_Answers)
+    
+    Question,Answers = df_Posts.filter(df_Posts.PostTypeId == 1).filter((col('AcceptedAnswerId').isNotNull())),\
+                      df_Posts.filter(df_Posts.PostTypeId == 2)
+    columns_to_drop_Question,columns_to_drop_Answers =['PostTypeId','ParentId','CommentCount','AnswerCount','FavoriteCount'], ['PostTypeId','AcceptedAnswerId','AnswerCount','FavoriteCount','Tags','Title','ViewCount']
+    Question= Question.withColumn("Year",year(Question.CreationDate)).withColumn("Month",month(Question.CreationDate))
+    
+    Answers = Answers.withColumn("AnsweredYear",year(Question.CreationDate)).withColumn("AnsweredMonth",month(Question.CreationDate))
+    
+    return Question.drop(*columns_to_drop_Question),Answers.drop(*columns_to_drop_Answers)
     
 
 def TagDownload(spark):
@@ -35,27 +43,23 @@ def TagDownload(spark):
         'TargetTagName',
         'Id'))
     TagSynMapping = TagSyn.select(explode(TagSyn.MAPPING))
-    
-    TagSynMapping=SupplementTags2(spark,TagSynMapping,TagName)
-    
-    mapping  = {entry[0]:entry[1] for entry in TagSynMapping.collect()}
-    return mapping
     """
     synonyms table
     +---------------+-----+                                                                                                                     |            key|value|                                                                                                                     +---------------+-----+                                                                                                                     |  windows-forms|    3|                                                                                                                     |       winforms|    3|
     +---------------+-----+
     """
-    #TagName.show()
-    #TagName = TagName.collect()
-   
-    #return SupplementTags(mapping,TagName)
-   
+    TagSynMapping=SupplementTags2(spark,TagSynMapping,TagName) 
+    return {entry[0]:entry[1] for entry in TagSynMapping.collect()}
+    
+    
+def Broadcast(spark,mapping):
+    return spark.sparkContext.broadcast(mapping)
+    
 def working_fun(mapping_broadcasted):
     def f(x):
         tmp = []
         for word in x:
             if word and mapping_broadcasted.value.get(word):
-                
                 tmp+=[mapping_broadcasted.value.get(word)]
         if tmp==[]:
             return ''
@@ -65,45 +69,22 @@ def working_fun(mapping_broadcasted):
     return udf(f)
 
 
-def Broadcast(spark,mapping):
-    return spark.sparkContext.broadcast(mapping)
-
-
 def MappingTag(TagSynMapping,Posts):
-    
-    #Posts.rdd.map(udf(MapAndSort,StringType()))
-    #print(TagSynMapping)
     return Posts.withColumn('mappingResult', working_fun(TagSynMapping)(col('Tags')))
       
 
-def SupplementTags(TagSynMapping,TagName):
-    
-    #TagName
-    Set = set()
-    for val in TagSynMapping.values():
-        Set.add(val)
-    #print("TagMap 0 size",len(TagSynMapping))
-    for tag in TagName:
-        if tag not in TagSynMapping:
-            rand = random.randint(0,sys.maxsize)
-            while rand in Set:
-                rand = random.randint(0,sys.maxsize)
-            Set.add(rand)
-            TagSynMapping[tag] = rand
-    #print("TagMap 1 size",len(TagSynMapping))
-    return TagSynMapping
     
 def SupplementTags2(spark,TagSynMapping,TagName):
+    # http://ec2-44-235-91-5.us-west-2.compute.amazonaws.com:8888/notebooks/findspark.py.ipynb
     TagSynMapping = TagSynMapping.select(col("key").alias("TagName"),col("value").alias("id"))
     TagName=TagName.drop('Count').withColumn("id", lit(None).cast(StringType())).select('*')
-    
+    # Concate two column
     result = TagSynMapping.union(TagName)
-    from pyspark.sql import Window
     w = Window.partitionBy('TagName')
     result=result.select('TagName', 'id', count('TagName').over(w).alias('n'))
-
+    # Get rid of duplicate
     result=result.dropDuplicates(subset=['TagName'])
-    #result.show()
+    # Generate mapping from name to 
     mapping=result.groupBy(result.id).count().select('id', col('count').alias('n')).withColumn("id2", monotonically_increasing_id()).select('*')
     #mapping.show()
     def working_fun2(mapping):
@@ -115,5 +96,5 @@ def SupplementTags2(spark,TagSynMapping,TagName):
     b = spark.sparkContext.broadcast(mapping)
     result=result.withColumn('new_id',when(col('id').isNotNull()  ,working_fun2(b)(col('id'))).otherwise(monotonically_increasing_id()))
     result=result.drop('id','n')
-    result.show()
+    #result.show()
     return result

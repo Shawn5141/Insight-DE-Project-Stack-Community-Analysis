@@ -13,7 +13,7 @@ def parse_line(line):
     return {key: value for key, value in pattern.findall(line)}
 
 
-def convert_badges(spark, link):
+def convert_Badges(spark, link):
     return spark.read.text(link).where(col('value').like('%<row Id%')) \
             .select(udf(parse_line, MapType(StringType(), StringType()))('value').alias('value')) \
             .select(
@@ -50,5 +50,26 @@ def convert_Posts(spark,link):
             col('value.AnswerCount').cast('integer'),
             col('value.CommentCount').cast('integer'),
             col('value.FavoriteCount').cast('integer')
+    )
+
+def convert_Users(spark, link):
+    return spark.read.text(link).where(col('value').like('%<row Id%')) \
+        .select(udf(parse_line, MapType(StringType(), StringType()))('value').alias('value')) \
+        .select(
+        col('value.Id').cast('integer'),
+        col('value.Reputation').cast('integer'),
+        col('value.CreationDate').cast('timestamp'),
+        col('value.DisplayName'),
+        col('value.EmailHash').cast('integer'),
+        col('value.LastAccessDate').cast('timestamp'),
+        col('value.WebsiteUrl'),
+        col('value.Location'),
+        col('value.Age').cast('integer'),
+        unescape('value.AboutMe').alias('AboutMe'),
+        col('value.Views').cast('integer'),
+        col('value.UpVotes').cast('integer'),
+        col('value.DownVotes').cast('integer'),
+        col('value.ProfileImageUrl'),
+        col('value.AccountId').cast('integer')
     )
     

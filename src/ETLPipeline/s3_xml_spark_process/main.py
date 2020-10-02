@@ -1,4 +1,4 @@
-from process_xml import initializeSpark,RunSpark,StopSpark 
+from runSpark import initializeSpark,RunSpark,StopSpark 
 from dataModel import connectWithDatabase, createTable, generateQuery,getInsertData,writeToJDBC
 from configFile import config
 

@@ -12,6 +12,7 @@ class config:
         # Bucket Initialization
         bucket='stackoverflowdumpdata'
         bucketparquet = 'stackoverflowparquet'
+        self.bucketparquet = bucketparquet
         self.bucketTag ='stackoverflow-tag'
         # Xml path
         Badges,Comments,PostHistory,PostLinks,Posts ,Tags,Users,Votes= 'Badges.xml','Comments.xml','PostHistory.xml','PostLinks.xml','Posts.xml','Tags.xml','Users.xml','Votes.xml'
@@ -25,16 +26,18 @@ class config:
         self.s3file_Votes = f's3a://{bucket}/{Votes}'
         
         # Parquet path
-        Badges_Parquet,Comments_Parquet,PostHistory_Parquet,PostLinks_Parquet,Posts_Parquet,Answers_Parquet ,Tags_Parquet,Users_Parquet,Votes_Parquet= 'Badges.parquet','Comments.parquet','PostHistory.parquet','PostLinks.parquet','Posts.parquet','Answers.Parquet','Tags.parquet','Users.parquet','Votes.parquet'
+        Badges_Parquet,Comments_Parquet,PostHistory_Parquet,PostLinks_Parquet,Questions_Parquet,Answers_Parquet ,Tags_Parquet,Users_Parquet,Votes_Parquet= 'Badges.parquet','Comments.parquet','PostHistory.parquet','PostLinks.parquet','Questions.parquet','Answers.Parquet','Tags.parquet','Users.parquet','Votes.parquet'
         self.s3file_parquet_Badges = f's3a://{bucketparquet}/{Badges_Parquet}' 
         self.s3file_parquet_Comments = f's3a://{bucketparquet}/{Comments_Parquet}' 
         self.s3file_parquet_PostHistory = f's3a://{bucketparquet}/{PostHistory_Parquet}' 
         self.s3file_parquet_PostLinks = f's3a://{bucketparquet}/{PostLinks_Parquet}' 
-        self.s3file_parquet_Posts = f's3a://{bucketparquet}/{Posts_Parquet}' 
+        self.s3file_parquet_Questions = f's3a://{bucketparquet}/{Questions_Parquet}' 
         self.s3file_parquet_Answers = f's3a://{bucketparquet}/{Answers_Parquet}' 
         self.s3file_parquet_Tags = f's3a://{bucketparquet}/{Tags_Parquet}' 
         self.s3file_parquet_Users = f's3a://{bucketparquet}/{Users_Parquet}'
         self.s3file_parquet_Votes = f's3a://{bucketparquet}/{Votes_Parquet}'
+        
+        self.LinkMap = {'Questions': self.s3file_parquet_Questions,'Answers':self.s3file_parquet_Answers}
         
         # stackoverflow-tag-synonyms-list
         self.TagName ='TagName.csv'
@@ -49,5 +52,7 @@ class config:
           "password" : self.password,
           "driver": "org.postgresql.Driver"
         }
+    def generateS3Path(self,BuecktName,fileName,extension):
+        return f's3a://{BuecktName}/{fileName}.{extension}'
     
 
