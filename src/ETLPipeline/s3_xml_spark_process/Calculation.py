@@ -55,10 +55,10 @@ def CalculateRangeYearTagCount(PrefixSumYearCount,BeginYear,EndYear):
 def CalculateSingleTagCount(rangeYearTagCount):
     rangeYearTagCount = rangeYearTagCount.withColumn("Original_Tags",rangeYearTagCount.Tags)
     df = rangeYearTagCount.select("Original_Tags",explode(rangeYearTagCount.Tags).alias('Tags'),col("YearTagCount"))
-    edge = df.select("Original_Tags","Tags")
-    singleTagCount=df.groupBy(df.Original_Tags,df.Tags).agg({"YearTagCount": "sum"}).withColumnRenamed("sum(YearTagCount)","singleTagCount").sort(desc("singleTagCount"))
+    edge = df.select("Original_Tags","Tags","YearTagCount")
+    singleTagCount=df.groupBy(df.Tags).agg({"YearTagCount": "sum"}).withColumnRenamed("sum(YearTagCount)","singleTagCount").sort(desc("singleTagCount"))
     singleTagCount.show(30, truncate = False)
-    
+    edge.show(30,truncate=False)
     return singleTagCount,edge
 
     
