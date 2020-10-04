@@ -8,6 +8,7 @@ def main():
     #cursor = connection.cursor()
     print("run spark")
     spark=initializeSpark()
+    spark.sparkContext.setLogLevel("WARN")
     df = RunSpark(spark)
     
     #createTable(cursor)
