@@ -1,0 +1,41 @@
+---
+Master:
+  - name: master
+    private_ip: 172.31.49.77
+    public_ip_dns: ec2-44-235-91-5.us-west-2.compute.amazonaws.com
+    enable: true
+    sshenable: false
+Workers:
+  - name: worker1
+    private_ip: None
+    public_ip_dns:  ec2-52-12-57-116.us-west-2.compute.amazonaws.com
+    enable: false
+    sshenable: false
+  - name: worker2
+    private_ip: None
+    public_ip_dns:  ec2-18-237-16-77.us-west-2.compute.amazonaws.com
+    enable: false
+    sshenable: false
+  - name: worker3
+    private_ip: None
+    public_ip_dns:  ec2-18-237-132-230.us-west-2.compute.amazonaws.com
+    enable: false
+    sshenable: false
+
+  - name: worker4
+    private_ip: 172.31.50.9
+    public_ip_dns:  ec2-44-234-109-73.us-west-2.compute.amazonaws.com
+    enable: true
+    sshenable: true
+
+  - name: worker5
+    private_ip:  172.31.62.192
+    public_ip_dns:  ec2-44-233-199-5.us-west-2.compute.amazonaws.com 
+    enable: true
+    sshenable: false
+
+  - name: worker6
+    private_ip: 172.31.48.53
+    public_ip_dns: ec2-44-234-21-142.us-west-2.compute.amazonaws.com
+    enable: true
+    sshenable: false

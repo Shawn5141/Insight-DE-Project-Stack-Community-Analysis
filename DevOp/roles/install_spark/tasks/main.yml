@@ -1,0 +1,81 @@
+---
+- include_vars: ./group_vars/ip_config.yml
+
+- name: install java
+  apt:
+    name:  openjdk-8-jre-headless
+    state: present
+    update_cache: true
+  become: true
+
+- name: install scala
+  apt: 
+    name: scala
+    state: present
+    update_cache: true
+  become: true
+ 
+- name: check file exist
+  stat:
+    path: /home/ubuntu/spark-2.4.7-bin-hadoop2.7.tgz
+  register: p
+
+- debug:
+    msg: "Folder exists..."
+  when: p.stat.exists
+- debug:
+    msg: "Folder not found"
+  when: p.stat.exists == False
+
+          
+- name: get spark
+  get_url:
+    url: http://mirrors.ibiblio.org/apache/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz
+    dest: ./
+    mode: 0755
+  when: p.stat.exists == False
+
+- name: check folder exisit
+  stat:
+    path: /home/ubuntu/spark-2.4.7-bin-hadoop2.7
+  register: r
+
+- name: unzip spark
+  become: true  
+  shell: "mkdir -p /usr/local/spark ;tar xvf /home/ubuntu/spark-2.4.7-bin-hadoop2.7.tgz"
+  when: r.stat.exists==False
+
+- name: check if unzip spark 
+  stat:
+    path: /usr/local/spark
+  register: q
+- debug:
+    msg: "Folder exists..."
+  when: q.stat.exists
+
+- name: mv to usr  
+  become: true
+  shell: "cp -r /home/ubuntu/spark-2.4.7-bin-hadoop2.7/* /usr/local/spark/"
+  when: q.stat.exists
+ 
+#- name: echo profile
+#command:
+#  cmd: "echo 'export PATH=/usr/local/spark/bin:$PATH' >> ~/.profile"
+#command:
+#  cmd: "source ~/.profile"
+#
+
+- name: render template for spark-env
+  template:
+    src: ./template/spark-env.sh.yml
+    dest: /usr/local/spark/conf/spark-env.sh
+    mode: a+x
+
+
+- name: render template for slaves
+  template: 
+    src: ./template/slaves.yml
+    dest: /usr/local/spark/conf/slaves
+
+
+
