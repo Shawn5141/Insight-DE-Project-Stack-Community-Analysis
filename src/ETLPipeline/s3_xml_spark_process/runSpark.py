@@ -18,7 +18,7 @@ def initializeSpark():
 
 def RunSpark(spark):
     
-    """
+    
     # Get dataframe for post, question, answers and user
     Posts = convert_Posts(spark,conf.s3file_Posts)
     Questions,Answers = Preprocess(spark,Posts)
@@ -31,52 +31,28 @@ def RunSpark(spark):
     SingleTagCountPath = conf.generateS3Path(bucket,"SingleTagCount","parquet")
     YearTagCountPath = conf.generateS3Path(bucket,"YearTagCount","parquet")
     ActiveUsersPath = conf.generateS3Path(bucket,"ActiveUsers","parquet")
+    prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
     
     
-#     ActiveUsers=CalculateActiveUser(Questions,Answers,Users)         # calculate for once
-#     ActiveUsers.show()
-#     WriteToParquet(ActiveUsers,ActiveUsersPath)
-#     QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers) # calculate for once
-#     QuestionsWithAnswerTime.show()
-#     WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
-    
+    ActiveUsers=CalculateActiveUser(Questions,Answers,Users)         # calculate for once
+
+    WriteToParquet(ActiveUsers,ActiveUsersPath)
+    QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers) # calculate for once
+    WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
     yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions)                  # calculate for once
   
     # Store yearTagCount and prefixSumYearCount
     
-    link = f's3a://stackoverflowparquet/prefixSumYearCount.parquet'
-    WriteToParquet(prefixSumYearCount,link)
-    
-    """
-    bucket = conf.bucketparquet
-    prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
-#     link = f's3a://stackoverflowparquet/prefixSumYearCount.parquet'
-    beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2015,2020)
-
-    rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable)
-    singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
-    
-#     prefixSumYearCount1 = readFromJDBC(spark,"prefixSumYearCount_2015")
-#     prefixSumYearCount2 = readFromJDBC(spark,"prefixSumYearCount_2020")    
     
     
-#     rangeYearTagCount = CalculateRangeYearTagCount(prefixSumYearCount,2015,2020)
+    
+    
+    # This is for user interface
+#     beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2015,2020)
+#     rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable)
 #     singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
-    #WriteToParquet(YearTagCount,YearTagCountPath)
     
 
-    
-    
-    
-    
-    
-    
-    
-    
-#     start = time.time()
-#     Questions = RangeSearchGetDataFrame(spark,"Questions",2011,2020)
-#     RangeSearchGetDataFrame_interval = time.time() -start
-   
    
     
   

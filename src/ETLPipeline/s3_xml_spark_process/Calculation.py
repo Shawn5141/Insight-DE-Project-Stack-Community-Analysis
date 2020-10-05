@@ -51,6 +51,7 @@ def CalculateRangeYearTagCount(PrefixSumYearCount,BeginYear,EndYear):
     return rangeYearTagCount
     
 def CalculateRangeYearTagCount2(preTable,postTable):
+    # Subtract post and pre and get 
     preTable = preTable.withColumnRenamed("cum_sum","pre_cum_sum").withColumnRenamed("Year","pre_Year").withColumnRenamed("mappingResult","pre_mappingResult").withColumnRenamed("Tags","pre_Tags")
     
     joinTable = postTable.join(preTable,postTable.Tags == preTable.pre_Tags,how='left')
