@@ -50,15 +50,21 @@ def CalculateRangeYearTagCount(PrefixSumYearCount,BeginYear,EndYear):
     rangeYearTagCount.show(30, truncate = False)
     return rangeYearTagCount
     
-
+def CalculateRangeYearTagCount2(preTable,postTable):
+    preTable = preTable.withColumnRenamed("cum_sum","pre_cum_sum").withColumnRenamed("Year","pre_Year").withColumnRenamed("mappingResult","pre_mappingResult").withColumnRenamed("Tags","pre_Tags")
+    
+    joinTable = postTable.join(preTable,postTable.Tags == preTable.pre_Tags,how='left')
+    joinTable = joinTable.withColumn("YearTagCount",joinTable.cum_sum-when(joinTable.pre_cum_sum.isNull(),0).otherwise(joinTable.pre_cum_sum))
+    return joinTable.select("Tags","YearTagCount")
 
 def CalculateSingleTagCount(rangeYearTagCount):
     rangeYearTagCount = rangeYearTagCount.withColumn("Original_Tags",rangeYearTagCount.Tags)
     df = rangeYearTagCount.select("Original_Tags",explode(rangeYearTagCount.Tags).alias('Tags'),col("YearTagCount"))
     edge = df.select("Original_Tags","Tags","YearTagCount")
-    singleTagCount=df.groupBy(df.Tags).agg({"YearTagCount": "sum"}).withColumnRenamed("sum(YearTagCount)","singleTagCount").sort(desc("singleTagCount"))
-    singleTagCount.show(30, truncate = False)
-    edge.show(30,truncate=False)
+    
+    singleTagCount=df.groupBy(df.Tags).agg({"YearTagCount": "sum"}).withColumnRenamed("sum(YearTagCount)","singleTagCount")
+    singleTagCount.show(10, truncate = False)
+    edge.show(10,truncate=False)
     return singleTagCount,edge
 
     

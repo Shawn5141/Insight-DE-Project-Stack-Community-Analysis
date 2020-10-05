@@ -5,7 +5,7 @@ spark-submit \
 --conf spark.driver.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true  \
 --jars spark-xml_2.11-0.6.0.jar \
 --driver-class-path /usr/local/spark/jars/postgresql-42.2.16.jar   --jars /usr/local/spark/jars/postgresql-42.2.16.jar \
---total-executor-cores 16 \
+--total-executor-cores 24 \
 --executor-cores 4 \
 --executor-memory 10G \
 --driver-memory 2g \

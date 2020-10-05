@@ -17,6 +17,8 @@ def initializeSpark():
 
 
 def RunSpark(spark):
+    
+    """
     # Get dataframe for post, question, answers and user
     Posts = convert_Posts(spark,conf.s3file_Posts)
     Questions,Answers = Preprocess(spark,Posts)
@@ -39,21 +41,30 @@ def RunSpark(spark):
 #     WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
     
     yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions)                  # calculate for once
+  
     # Store yearTagCount and prefixSumYearCount
-    rangeYearTagCount = CalculateRangeYearTagCount(prefixSumYearCount,2015,2020)
+    
+    link = f's3a://stackoverflowparquet/prefixSumYearCount.parquet'
+    WriteToParquet(prefixSumYearCount,link)
+    
+    """
+    bucket = conf.bucketparquet
+    prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
+#     link = f's3a://stackoverflowparquet/prefixSumYearCount.parquet'
+    beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2015,2020)
+
+    rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable)
     singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
+    
+#     prefixSumYearCount1 = readFromJDBC(spark,"prefixSumYearCount_2015")
+#     prefixSumYearCount2 = readFromJDBC(spark,"prefixSumYearCount_2020")    
+    
+    
+#     rangeYearTagCount = CalculateRangeYearTagCount(prefixSumYearCount,2015,2020)
+#     singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
     #WriteToParquet(YearTagCount,YearTagCountPath)
     
 
-    
-    
-    
-#     Questions = RangeSearchGetDataFrame(spark,"Questions",2011,2020)
-#     Answers = RangeSearchGetDataFrame(spark,"Answers",2011,2020)
-    
-#     MutualTagCount,SingleTagCount = CalculateTagCount(Questions)
-#     WriteToParquet(MutualTagCount,MutualTagCountPath)
-#     WriteToParquet(SingleTagCount,SingleTagCountPath)
     
     
     
@@ -69,8 +80,8 @@ def RunSpark(spark):
    
     
   
-    
-    return {'Questions':Questions,'Answers':Answers,"Users":Users}
+    return None
+    #return {'Questions':Questions,'Answers':Answers,"Users":Users}
 
 
 
@@ -78,26 +89,44 @@ def StopSpark(spark):
     spark.stop()
 
 
-def RangeSearchGetDataFrame(spark,ObjectName,startYear,endYear,startMonth=None,endMonth=None):
-    
-    link = conf.LinkMap[ObjectName]
-    parquetFile = spark.read.parquet(link)
-    #parquetFile = spark.read.parquet(link+'/Year=*/Month=*/Day=*/Country=*')
-    parquetFile.createOrReplaceTempView(ObjectName)
-    sqlCommand = 'SELECT * from {}'.format(parquetFile)
-    if not startMonth and not endMonth:
-        sqlCommand = "SELECT * FROM {} WHERE Year >= {} AND Year <= {}".format(parquetFile,startYear,endYear,startMonth,endMonth)
-    else:
-        sqlCommand = "SELECT * FROM {} WHERE Year >= {} AND Year <= {} AND MONTH>={} AND MONTH<={}".format(parquetFile,startYear,endYear,startMonth,endMonth)
-    return spark.sql(sqlCommand)
+def RangeSearchGetDataFrame(spark,link,startYear,endYear):   
+    parquetFileBefore = spark.read.parquet(link+f'/Year={startYear}')
+    parquetFileAfter = spark.read.parquet(link+f'/Year={endYear}')
+    return parquetFileBefore,parquetFileAfter
+
+
 
 
     
 def WriteToParquet(df,link):
     
-    df = df.repartition("Year", "Month")
-    df.coalesce(8).write.format("parquet").partitionBy("Year", "Month").mode("overwrite").save(link)
-    df.write.mode('overwrite').parquet(link)
+    df = df.repartition("Year")
+    df.coalesce(8).write.format("parquet").partitionBy("Year").mode("overwrite").save(link)
+
+    
+def writeToJDBC(df,tableName):
+    #df.table(tableName).write.jdbc(config.jdbcUrl,tableName,config.connectionProperties)
+    #df = df.na.fill(0)
+    mode= "overwrite"
+    df.write.jdbc(url=conf.jdbcUrl, table=tableName, mode=mode, properties=conf.connectionProperties)
+    return tableNameList
+
+
+      
+def readFromJDBC(spark,tableName):
+    jdbcDF = spark.read.format("jdbc") \
+    .option("url", conf.jdbcUrl) \
+    .option("dbtable", tableName) \
+    .option("user", conf.username) \
+    .option("password", conf.password) \
+    .option("driver", "org.postgresql.Driver") \
+    .option("partitionColumn", "Year")\
+    .option("lowerBound", 1)\
+    .option("upperBound", 4000000)\
+    .option("numPartitions",100)\
+    .load()
+    return jdbcDF
+
     
 if __name__=='__main__':
     spark = initializeSpark()

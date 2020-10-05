@@ -9,6 +9,10 @@ class config:
         self.port = 5432
         self.region='us-west-2'
         
+        
+        # postgres 
+        self.yearList=[str(i) for i in range(2008,2021)]
+        
         # Bucket Initialization
         bucket='stackoverflowdumpdata'
         bucketparquet = 'stackoverflowparquet'
