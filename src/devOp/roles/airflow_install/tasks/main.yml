@@ -1,9 +1,0 @@
----
-
-- name: install airflow
-  command: 
-    cmd: pip3 install apache-airflow
- 
-- name: initialize database
-  command:
-    cmd: airflow initdb

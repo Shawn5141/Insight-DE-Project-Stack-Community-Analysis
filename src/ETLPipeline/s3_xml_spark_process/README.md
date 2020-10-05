@@ -1,1 +1,0 @@
-spark-submit --packages  org.postgresql:postgresql:42.2.0.jre8 --packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.7 --conf spark.executor.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true --conf spark.driver.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true  --jars spark-xml_2.11-0.6.0.jar main.py

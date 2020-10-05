@@ -1,5 +1,0 @@
----
-- name:
-  template: 
-    src: ./template/ssh_config.yml.yml
-    dest: /home/shawnhsiao/Insight/Stack-Community/src/devOp/roles/connect_ssh/tasks/main.yml

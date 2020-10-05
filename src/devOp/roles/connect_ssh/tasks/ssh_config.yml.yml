@@ -1,4 +1,0 @@
----
-- name: ssh to {{worker.name}}           
-  shell: ssh -i ~/.ssh/Shou-En-te.pem ubuntu@{{Masters[0].public_ip_dns}} 'cat ~/.ssh/id_rsa.pub' | ssh -i ~/.ssh/Shou-En-te.pem ubuntu@{{Workers[3].public_ip_dns}} 'cat >> ~/.ssh/authorized_keys'
-  
