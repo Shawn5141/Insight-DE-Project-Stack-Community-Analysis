@@ -56,6 +56,10 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     tag      count     
     [1]      500
     [1,2,3]  1234
+    
+    check if the yearRange exist in cache map
+    if not in cache map then check if it's in database
+    if not in database, then compute using spark 
 
     """
     print("====new call=====",yearRange,tagSelect,filterNumber)
@@ -113,12 +117,19 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     node_dict = {}
     edge_dict ={}
     for index, row in Edge.iterrows():
-        node_dict[row['Original_Tags']] = row['YearTagCount']
-        edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
+        if row['YearTagCount']>int(filterNumber):
+            node_dict[row['Original_Tags']] = row['YearTagCount']
+            edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
         
     for index, row in Node.iterrows():
-        node_dict[row['Tags']] = row['singleTagCount']
+        if row['singleTagCount']>int(filterNumber):
+            node_dict[row['Tags']] = row['singleTagCount']
     maxNode_size = -float('inf')
+    
+    
+    print("node dict len",len(node_dict))
+    print("edge dict len",len(edge_dict))
+    
     for key,val in node_dict.items():
         G.add_node(key, size=val)
         maxNode_size = max(maxNode_size,val)
@@ -413,7 +424,7 @@ app.layout = html.Div([
                     dcc.Markdown(d("""
                             **Time Range **
 
-                            Select Year Range.
+                            Select filter & Year Range.
                             """)),
                      
                     html.Div(
