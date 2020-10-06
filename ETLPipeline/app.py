@@ -14,6 +14,9 @@ import json
 
 import subprocess
 import os
+import math
+import numpy as np
+
 """
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -32,6 +35,18 @@ YEAR=[2010, 2019]
 FilterNumber = 3000
 ACCOUNT="A0001"
 
+Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/edge.csv')
+Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/singleTagCount.csv')
+nodeDict={}
+for index, row in Node.iterrows():
+    nodeDict[row['Tags']] = row['singleTagCount']
+
+nodeOption = [
+    {"label": str(node), "value": str(node)}
+    for node in nodeDict.keys()
+]
+
+
 
 
 def network_graph(yearRange,FilterNumber=3000):
@@ -48,9 +63,14 @@ def network_graph(yearRange,FilterNumber=3000):
     Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/edge.csv')
     Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/singleTagCount.csv')
     
+    node_option = []
     
     
-    G= nx.MultiDiGraph()  
+    
+    
+    G= nx.MultiDiGraph()
+    
+    #G = nx.random_geometric_graph(200, 0.125) 
     node_dict = {}
     edge_dict ={}
     for index, row in Edge.iterrows():
@@ -63,17 +83,19 @@ def network_graph(yearRange,FilterNumber=3000):
     for key,val in node_dict.items():
         G.add_node(key, size=val)
         maxNode_size = max(maxNode_size,val)
-#     for key,val in edge_dict.items():
-#         #G.add_edge(key[0],key[1],weight=val)
-#         G.add_edge(key[0],key[1],weight=val)
+    for key,val in edge_dict.items():
+        G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
+        
     
-    pos = nx.drawing.layout.spring_layout(G)
+    #pos = nx.drawing.layout.random_layout(G)
+    pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
     for node in G.nodes:
         G.nodes[node]['pos'] = list(pos[node])
+        node_option.append({"label": str(node), "value": str(node)})
     
     
-#     colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
-#     colors = ['rgb' + str(x.rgb) for x in colors]
+    colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
+    colors = ['rgb' + str(x.rgb) for x in colors]
     traceRecode = []  # contains edge_trace, node_trace, middle_node_trace
     index = 0
     for edge in G.edges:
@@ -81,6 +103,7 @@ def network_graph(yearRange,FilterNumber=3000):
         x1, y1 = G.nodes[edge[1]]['pos']
         
         weight=G.edges[edge]['weight']/ max(Edge['YearTagCount'])*10
+        
         trace = go.Scatter(x=tuple([x0, x1, None]), y=tuple([y0, y1, None]),
                            mode='lines',
                            line={'width': weight},
@@ -88,9 +111,9 @@ def network_graph(yearRange,FilterNumber=3000):
                            text=[],
                            hovertext=[],
                            line_shape='spline',
-                           opacity=1)
+                           opacity=0.6)
         trace['text']+= tuple([None])
-        trace['hovertext']+= tuple([None])
+        trace['hovertext']+= tuple([edge])
         traceRecode.append(trace)
         index = index + 1
        
@@ -100,19 +123,26 @@ def network_graph(yearRange,FilterNumber=3000):
     node_list = list(node_dict.items())
     for node in G.nodes():
         node_trace = go.Scatter(x=[], y=[],text=[], hovertext=[], mode='markers+text', textposition="bottom center",
-                            hoverinfo="text", marker={'size': 50,'color': 'LightSkyBlue'})
+                            hoverinfo="text", marker={'size': 100,'color': 'LightSkyBlue'})
         x, y = G.nodes[node]['pos']
         text = node_list[index][0]
         node_trace['x'] += tuple([x])
         node_trace['y'] += tuple([y])
-        node_trace['hovertext'] += tuple([text])
-        node_trace['text'] += tuple([None])
+        hovertext = text+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
+        node_trace['hovertext'] += tuple([hovertext])
+        
+        if G.nodes[node]['size']>FilterNumber*10:
+            node_trace['text'] += tuple([text])
+        else:
+            node_trace['text'] +=tuple([None])
         #node_trace['text'] += tuple([text])
-        node_trace['marker']['size']=G.nodes[node]['size']/maxNode_size*100
+        
+        node_trace['marker']['size']=G.nodes[node]['size']/maxNode_size*50
+        print(node_trace['marker']['size'],G.nodes[node]['size'])
         index = index + 1
 
         traceRecode.append(node_trace)
-    print(traceRecode)
+    
     
     figure = {
         "data": traceRecode,
@@ -122,16 +152,15 @@ def network_graph(yearRange,FilterNumber=3000):
                             yaxis={'showgrid': False, 'zeroline': False, 'showticklabels': False},
                             height=600,
                             clickmode='event+select',
-                            annotations=[
-                                dict(
-                                    ax=(G.nodes[edge[0]]['pos'][0] + G.nodes[edge[1]]['pos'][0]) / 2,
-                                    ay=(G.nodes[edge[0]]['pos'][1] + G.nodes[edge[1]]['pos'][1]) / 2, axref='x', ayref='y',
-                                    x=(G.nodes[edge[1]]['pos'][0] * 3 + G.nodes[edge[0]]['pos'][0]) / 4,
-                                    y=(G.nodes[edge[1]]['pos'][1] * 3 + G.nodes[edge[0]]['pos'][1]) / 4, xref='x', yref='y',
-                                    showarrow=False,
-                                    
-                                    opacity=1
-                                ) for edge in G.edges]
+#                             annotations=[
+#                                 dict(
+#                                     ax=(G.nodes[edge[0]]['pos'][0] + G.nodes[edge[1]]['pos'][0]) / 2,
+#                                     ay=(G.nodes[edge[0]]['pos'][1] + G.nodes[edge[1]]['pos'][1]) / 2, axref='x', ayref='y',
+#                                     x=(G.nodes[edge[1]]['pos'][0] * 3 + G.nodes[edge[0]]['pos'][0]) / 4,
+#                                     y=(G.nodes[edge[1]]['pos'][1] * 3 + G.nodes[edge[0]]['pos'][1]) / 4, xref='x', yref='y',
+#                                     showarrow=False,
+#                                     opacity=0.01
+#                                 ) for edge in G.edges]
                             )}
     return figure
         
@@ -304,69 +333,103 @@ app.layout = html.Div([
         className="row",
         children=[
             ##############################################left side two input components
-#             html.Div(
-#                 className="two columns",
-#                 children=[
-#                     dcc.Markdown(d("""
-#                             **Time Range To Visualize**
 
-#                             Slide the bar to define year range.
-#                             """)),
-#                     html.Div(
-#                         className="twelve columns",
-#                         children=[
-#                             dcc.RangeSlider(
-#                                 id='my-range-slider',
-#                                 min=2008,
-#                                 max=2020,
-#                                 step=1,
-#                                 value=[2008, 2019],
-#                                 marks={
-#                                     2008: {'label':'2008'},
-#                                     2009: {'label':'2009'},
-#                                     2010: {'label': '2010'},
-#                                     2011: {'label': '2011'},
-#                                     2012: {'label': '2012'},
-#                                     2013: {'label': '2013'},
-#                                     2014: {'label': '2014'},
-#                                     2015: {'label': '2015'},
-#                                     2016: {'label': '2016'},
-#                                     2017: {'label': '2017'},
-#                                     2018: {'label': '2018'},
-#                                     2019: {'label': '2019'},
-#                                     2020: {'label':'2020'}
-#                                 }
-#                             ),
-#                             html.Br(),
-#                             html.Div(id='output-container-range-slider')
-#                         ],
-#                         style={'height': '300px','width':'400px'}
-#                     ),
-#                     html.Div(
-#                         className="twelve columns",
-#                         children=[
-#                             dcc.Markdown(d("""
-#                             **Account To Search**
-
-#                             Input the account to visualize.
-#                             """)),
-#                             dcc.Input(id="input1", type="text", placeholder="Account"),
-#                             html.Div(id="output")
-#                         ],
-#                         style={'height': '300px'}
-#                     )
-#                 ]
-#             ),
            
             ############################################middle graph component
             html.Div(
                 className="eight columns",
                 children=[dcc.Graph(id="my-graph",
-                                    figure=network_graph(YEAR, FilterNumber))],
-            )
+                                    figure=network_graph(YEAR, FilterNumber)),
+                         
+                         
+                          
+                          
+                          html.Div(
+                            className="eight columns",
+                            children=[
+                                dcc.Markdown(d("""
+                            **Tags To Search**
+                            Input the tag to visualize.
+                            """)),
+                                
+                              
+                            dcc.Dropdown(
+                            id="well_types",
+                            options=nodeOption,
+                            multi=True,
+                            
+                            className="dcc_control",
+                        ),
+                            ],
+                            style={'height': '300px'}
+                        )
+                         
+                         ],
+            ),
 
             #########################################right side two output component
-            
+                        html.Div(
+                className="two columns",
+                children=[
+                    dcc.Markdown(d("""
+                            **Time Range To Visualize**
+
+                            Slide the bar to define year range.
+                            """)),
+                    html.Div(
+                        className="twelve columns",
+                        children=[
+                            dcc.RangeSlider(
+                                id='my-range-slider',
+                                min=2008,
+                                max=2020,
+                                step=1,
+                                value=[2008, 2019],
+                                marks={
+                                    2008: {'label':'2008'},
+                                    2009: {'label':'2009'},
+                                    2010: {'label': '2010'},
+                                    2011: {'label': '2011'},
+                                    2012: {'label': '2012'},
+                                    2013: {'label': '2013'},
+                                    2014: {'label': '2014'},
+                                    2015: {'label': '2015'},
+                                    2016: {'label': '2016'},
+                                    2017: {'label': '2017'},
+                                    2018: {'label': '2018'},
+                                    2019: {'label': '2019'},
+                                    2020: {'label':'2020'}
+                                }
+                            ),
+                            html.Br(),
+                            html.Div(id='output-container-range-slider')
+                        ],
+                        style={'height': '300px','width':'400px'}
+                    ),
+                    
+                    html.Div(
+                    [
+                        
+                        dcc.Graph(
+                            id="Tag Count",
+                            figure=dict(
+                                layout=dict(
+#                                     plot_bgcolor=app_color["graph_bg"],
+#                                     paper_bgcolor=app_color["graph_bg"],
+                                )
+                            ),
+                        ),
+                        dcc.Interval(
+                            id="wind-speed-update",
+                            interval=100,
+                            n_intervals=0,
+                        ),
+                    ],
+                    className="two-thirds column wind__speed__container",
+                )
+                   
+                ]
+            )
         ]
     )
 ])
