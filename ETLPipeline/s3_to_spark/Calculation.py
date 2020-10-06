@@ -6,7 +6,9 @@ from pyspark.sql import Window
 
 
 
-
+def getWholeDataFrame(spark,link):
+    parquetFile = spark.read.parquet(link)
+    return parquetFile
 
 
 def RangeSearchGetDataFrame(spark,link,startYear,endYear):   
