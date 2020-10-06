@@ -4,6 +4,16 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql import Window
 
+
+
+
+
+
+def RangeSearchGetDataFrame(spark,link,startYear,endYear):   
+    parquetFileBefore = spark.read.parquet(link+f'/Year={startYear}')
+    parquetFileAfter = spark.read.parquet(link+f'/Year={endYear}')
+    return parquetFileBefore,parquetFileAfter
+
 def CalculateTagCount(Questions):
     # MutualTagCount
     MutualTagCount = Questions.select("Tags","mappingResult").groupBy("mappingResult","Tags").count().withColumnRenamed("count","Tag Number").sort(desc("count"))
@@ -58,10 +68,24 @@ def CalculateRangeYearTagCount2(preTable,postTable,filterNum):
     joinTable = joinTable.withColumn("YearTagCount",joinTable.cum_sum-when(joinTable.pre_cum_sum.isNull(),0).otherwise(joinTable.pre_cum_sum))
     return joinTable.select("Tags","YearTagCount").filter(joinTable.YearTagCount>filterNum)
 
+
 def CalculateSingleTagCount(rangeYearTagCount):
+    def getter(column):
+        col_new=''
+        if len(column)==1:
+            return None
+        for i,col in enumerate(column):
+            if i==0:
+               col_new=col
+            else:
+               col_new=col_new+','+col
+        return col_new
+
+    getterUDF = udf(getter, StringType())
+
     rangeYearTagCount = rangeYearTagCount.withColumn("Original_Tags",rangeYearTagCount.Tags)
-    df = rangeYearTagCount.select("Original_Tags",explode(rangeYearTagCount.Tags).alias('Tags'),col("YearTagCount"))
-    edge = df.select("Original_Tags","Tags","YearTagCount")
+    df = rangeYearTagCount.select(getterUDF(col("Original_Tags")).alias("Original_Tags"),explode(rangeYearTagCount.Tags).alias('Tags'),col("YearTagCount"))
+    edge = df.filter(col("Original_Tags").isNotNull()).select("Original_Tags","Tags","YearTagCount")
     
     singleTagCount=df.groupBy(df.Tags).agg({"YearTagCount": "sum"}).withColumnRenamed("sum(YearTagCount)","singleTagCount")
     singleTagCount.show(10, truncate = False)
@@ -82,8 +106,8 @@ def CalculateAnswerTime(Questions,Answers):
     Questions = Questions.join(Answers, Questions.Id == Answers.ParentId,how='inner')
     
     timeFmt = "yyyy-MM-dd'T'HH:mm:ss.SSS"
-    timeDiff = (unix_timestamp('CreationDate', format=timeFmt)\
-            - unix_timestamp('Min_of_AnswersCreationDate', format=timeFmt))
+    timeDiff = (unix_timestamp('Min_of_AnswersCreationDate', format=timeFmt)\
+            - unix_timestamp('CreationDate', format=timeFmt))
     Questions = Questions.withColumn('AnswerTime',timeDiff ) 
     Questions.show()
     return Questions

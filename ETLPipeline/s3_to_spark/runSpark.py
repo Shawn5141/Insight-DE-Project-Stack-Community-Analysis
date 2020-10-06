@@ -19,10 +19,10 @@ def initializeSpark():
 def RunSpark(spark):
     
     
-#     # Get dataframe for post, question, answers and user
-#     Posts = convert_Posts(spark,conf.s3file_Posts)
-#     Questions,Answers = Preprocess(spark,Posts)
-#     Users = convert_Users(spark,conf.s3file_Users)
+    # Get dataframe for post, question, answers and user
+    Posts = convert_Posts(spark,conf.s3file_Posts)
+    Questions,Answers = Preprocess(spark,Posts)
+    Users = convert_Users(spark,conf.s3file_Users)
     
     # Generate Path to S3
     bucket = conf.bucketparquet
@@ -32,20 +32,20 @@ def RunSpark(spark):
     prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
     
     
-#     ActiveUsers=CalculateActiveUser(Questions,Answers,Users)           # calculate for once
-#     WriteToParquet(ActiveUsers,ActiveUsersPath)
-#     QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers)   # calculate for once
-#     WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
-#     yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions) # calculate for once
-#     WriteToParquet(yearTagCount,YearTagCountPath)
+    ActiveUsers=CalculateActiveUser(Questions,Answers,Users)           # calculate for once
+    WriteToParquet(ActiveUsers,ActiveUsersPath)
+    QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers)   # calculate for once
+    WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
+    yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions) # calculate for once
+    WriteToParquet(yearTagCount,YearTagCountPath)
     #WriteToParquet(prefixSumYearCount,prefixSumYearCountPath)
     
     
     
     # This is for user interface
-    beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2019,2020)
-    rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable,2000) #filter number to get larger tag
-    singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
+#     beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2019,2020)
+#     rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable,2000) #filter number to get larger tag
+#     singleTagCount,edge = CalculateSingleTagCount(rangeYearTagCount)
     
 
    
