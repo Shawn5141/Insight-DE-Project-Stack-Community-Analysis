@@ -32,8 +32,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = "Stack Overflow Network"
 
 YEAR=[2010, 2019]
-FilterNumber = 3000
+filterNumber = 3000
 ACCOUNT="A0001"
+tagSelection = []
 
 Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/edge.csv')
 Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/singleTagCount.csv')
@@ -46,27 +47,65 @@ nodeOption = [
     for node in nodeDict.keys()
 ]
 
+previous_year = None
+previous_Edge = None
 
-
-
-def network_graph(yearRange,FilterNumber=3000):
+def network_graph(yearRange,tagSelect,filterNumber=3000):
+    
     """
     tag      count     
     [1]      500
     [1,2,3]  1234
 
     """
-#     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
-#     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str(FilterNumber)
-#     process_output = subprocess.call([command],shell=True)
-#     print("after process")
-    Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/edge.csv')
-    Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/singleTagCount.csv')
+    print("====new call=====",yearRange,tagSelect,filterNumber)
+    global previous_year
+    global previous_Edge
+    global previous_Node
+    if previous_year!=yearRange:
+    #     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
+    #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str(FilterNumber)
+    #     process_output = subprocess.call([command],shell=True)
+    #     print("after process")
     
-    node_option = []
-    
-    
-    
+        Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/edge.csv')
+        Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/singleTagCount.csv')
+        previous_year = yearRange
+        previous_Edge = Edge
+        previous_Node = Node
+    else:
+        Edge = previous_Edge
+        Node = previous_Node
+        
+        
+    if len(tagSelect)!=0:
+        pass
+#         for tag in tagSelect:
+#             node_trace = go.Scatter(x=tuple([1]), y=tuple([1]), text=tuple([str(tag)]), textposition="bottom center",
+#                                     mode='markers+text',
+#                                     marker={'size': 50, 'color': 'LightSkyBlue'})
+#             traceRecode.append(node_trace)
+
+#             node_trace1 = go.Scatter(x=tuple([1]), y=tuple([1]),
+#                                     mode='markers',
+#                                     marker={'size': 50, 'color': 'LightSkyBlue'},
+#                                     opacity=0)
+#             traceRecode.append(node_trace1)
+
+#         figure = {
+#             "data": traceRecode,
+#             "layout": go.Layout(title='Interactive Transaction Visualization', showlegend=False,
+#                                 margin={'b': 40, 'l': 40, 'r': 40, 't': 40},
+#                                 xaxis={'showgrid': False, 'zeroline': False, 'showticklabels': False},
+#                                 yaxis={'showgrid': False, 'zeroline': False, 'showticklabels': False},
+#                                 height=600
+#                                 )}
+#         return figure
+        
+        
+        
+        
+        
     
     G= nx.MultiDiGraph()
     
@@ -91,7 +130,7 @@ def network_graph(yearRange,FilterNumber=3000):
     pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
     for node in G.nodes:
         G.nodes[node]['pos'] = list(pos[node])
-        node_option.append({"label": str(node), "value": str(node)})
+        
     
     
     colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
@@ -131,14 +170,14 @@ def network_graph(yearRange,FilterNumber=3000):
         hovertext = text+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
         node_trace['hovertext'] += tuple([hovertext])
         
-        if G.nodes[node]['size']>FilterNumber*10:
+        if G.nodes[node]['size']>int(filterNumber)*10:
             node_trace['text'] += tuple([text])
         else:
             node_trace['text'] +=tuple([None])
         #node_trace['text'] += tuple([text])
         
         node_trace['marker']['size']=G.nodes[node]['size']/maxNode_size*50
-        print(node_trace['marker']['size'],G.nodes[node]['size'])
+        #print(node_trace['marker']['size'],G.nodes[node]['size'])
         index = index + 1
 
         traceRecode.append(node_trace)
@@ -339,7 +378,7 @@ app.layout = html.Div([
             html.Div(
                 className="eight columns",
                 children=[dcc.Graph(id="my-graph",
-                                    figure=network_graph(YEAR, FilterNumber)),
+                                    figure=network_graph(YEAR,tagSelection ,filterNumber)),
                          
                          
                           
@@ -354,10 +393,10 @@ app.layout = html.Div([
                                 
                               
                             dcc.Dropdown(
-                            id="well_types",
+                            id="tagSelect",
                             options=nodeOption,
                             multi=True,
-                            
+                            value=[],
                             className="dcc_control",
                         ),
                             ],
@@ -372,10 +411,22 @@ app.layout = html.Div([
                 className="two columns",
                 children=[
                     dcc.Markdown(d("""
-                            **Time Range To Visualize**
+                            **Time Range **
 
-                            Slide the bar to define year range.
+                            Select Year Range.
                             """)),
+                     
+                    html.Div(
+                        className="two columns",
+                        children=[
+                        dcc.Input(
+                            id="filterNum",
+                            value=3000,
+                            placeholder="input filter Number",
+
+                        )]
+                    ),
+                    
                     html.Div(
                         className="twelve columns",
                         children=[
@@ -437,26 +488,28 @@ app.layout = html.Div([
 ###################################callback for left side components
 @app.callback(
     dash.dependencies.Output('my-graph', 'figure'),
-    [dash.dependencies.Input('my-range-slider', 'value'), dash.dependencies.Input('input1', 'value')])
-def update_output(value,input1):
+    [dash.dependencies.Input('my-range-slider', 'value'),dash.dependencies.Input('tagSelect', 'value') ,dash.dependencies.Input('filterNum', 'value')])
+def update_output(value,tagSelection,filterNum):
     YEAR = value
-    FilterNumber = input1
+    filterNumber = filterNum
+    tagSelect = tagSelection
+    print(tagSelect)
     #download()
-    return network_graph(value, input1)
+    return network_graph(value,tagSelect, filterNumber)
     # to update the global variable of YEAR and ACCOUNT
 # ################################callback for right side components
-@app.callback(
-    dash.dependencies.Output('hover-data', 'children'),
-    [dash.dependencies.Input('my-graph', 'hoverData')])
-def display_hover_data(hoverData):
-    return json.dumps(hoverData, indent=2)
+# @app.callback(
+#     dash.dependencies.Output('hover-data', 'children'),
+#     [dash.dependencies.Input('my-graph', 'hoverData')])
+# def display_hover_data(hoverData):
+#     return json.dumps(hoverData, indent=2)
 
 
-@app.callback(
-    dash.dependencies.Output('click-data', 'children'),
-    [dash.dependencies.Input('my-graph', 'clickData')])
-def display_click_data(clickData):
-    return json.dumps(clickData, indent=2)
+# @app.callback(
+#     dash.dependencies.Output('click-data', 'children'),
+#     [dash.dependencies.Input('my-graph', 'clickData')])
+# def display_click_data(clickData):
+#     return json.dumps(clickData, indent=2)
 
 
 
@@ -470,4 +523,4 @@ if __name__ == '__main__':
     import socket
     host = socket.gethostbyname(socket.gethostname())
     print(host)
-    app.run_server(debug=False, host=host, port = 4444)
+    app.run_server(debug=True, host=host, port = 4444)
