@@ -81,9 +81,9 @@ def line_graph(tagSelect):
         print("no value",prev_tagSelection,tagSelect)
         return go.Figure(data=[go.Scatter(x=[], y=[])])
     if prev_tagSelection==tagSelect:
-        
+        print("prev equal to curr",prev_tagSelection)
         return trendMap[tuple(prev_tagSelection)]
-    
+    print("curr",tagSelect)
     for idx,tagName in enumerate(tagSelect):
         if idx==0:
             df = getYearList(tagName)
@@ -98,9 +98,9 @@ def line_graph(tagSelect):
             df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
         print(idx,df.head())
     
-    print("finish merging")
-    y_val = [tag+"_count" for tag in tagSelect]
     
+    y_val = [tag+"_count" for tag in tagSelect]
+    print("finish merging",y_val)
     fig = px.line(df, x="Year", y=y_val)
     fig.update_traces(mode='markers+lines')
     fig.update_layout(margin={'l': 10, 'b': 50, 't': 10, 'r': 0}, hovermode='closest')
@@ -117,7 +117,7 @@ edgeMap = {}
 nodeMap = {}
 
 def network_graph(yearRange,tagSelect,filterNumber=3000):
-    #print(tagSelect)
+    print("network begin",yearRange,tagSelect,filterNumber)
     """
     tag      count     
     [1]      500
@@ -140,14 +140,17 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     global nodeMap
     yearRange= tuple(yearRange)
     if yearRange not in yearMap:
+        print("not in yearMap",yearRange)
     #     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
     #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str("300")
     #     process_output = subprocess.call([command],shell=True)
     #     print("after process")
-    
-    
-        Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/edge.csv')
-        Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/singleTagCount.csv')
+        path = "/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/"
+        prefix = str(yearRange[0])+str(yearRange[1])
+        EdgePath = path+prefix+"edge.csv"
+        NodePath = path+prefix+"singleTagCount.csv"
+        Edge = pd.read_csv(EdgePath)
+        Node = pd.read_csv(NodePath)
         #previous_year = yearRange
         yearMap.add(yearRange)
         edgeMap[yearRange] = Edge
@@ -303,6 +306,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
                             height=600,
                             clickmode='event+select',
                             )}
+    #print(figure)
     return figure
         
     
@@ -368,7 +372,7 @@ app.layout = html.Div([
                     dcc.Markdown(d("""
                             **Time Range **
 
-                            Select filter & Year Range.
+                            Select Post Number filter & Year Range.
                             """)),
                      
                     html.Div(
@@ -485,6 +489,19 @@ def update_trend(selectedData, value):
     return line_graph(value)
 
 
+# @app.callback(
+#     dash.dependencies.Output('tag-trend', 'figure'),
+#     [dash.dependencies.Input('tagSelect', 'value'),
+#     dash.dependencies.State('my-graph', 'selectedData')])
+# def update_trend_using_dropDown(value,selectedData):
+# #     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
+# #         data = selectedData["points"][0]["hovertext"].split('<')[0]
+# #         if data in value:
+# #             value.remove(data)
+# #         else:
+# #             value.append(data)
+           
+#     return line_graph(value)
     
 if __name__ == '__main__':
         #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
