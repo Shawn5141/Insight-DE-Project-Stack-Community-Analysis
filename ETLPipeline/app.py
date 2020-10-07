@@ -5,7 +5,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import networkx as nx
 import plotly.graph_objs as go
-
+import plotly.express as px
 import pandas as pd
 from colour import Color
 from datetime import datetime
@@ -37,11 +37,13 @@ YEAR=[2010, 2019]
 filterNumber = 3000
 ACCOUNT="A0001"
 tagSelection = []
-
+prev_tagSelection =[]
 # read from tagName
 Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/edge.csv')
 Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/singleTagCount.csv')
 nodeDict={}
+trendMap={}
+TagName2trendMap ={}
 for index, row in Node.iterrows():
     nodeDict[row['Tags']] = row['singleTagCount']
 
@@ -56,14 +58,57 @@ for index, row in Edge.iterrows():
 #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
 
 
-def getYearList(TagNameList):
+def getYearList(TagName):
+    global TagName2trendMap
+    if TagName in TagName2trendMap:
+        return TagName2trendMap[TagName]
     pid = os.getpid()
-    fileName = '_'.join([e for e in TagNameList.split(',')])
+    fileName = '_'.join([e for e in TagName.split(',')])
     path = os.getcwd()+'/App/tmp'+"/"+fileName+"_yearTagCount.csv"
-    Taglist = ','.join(TagNameList)
+    if not os.path.isfile(path):
+        command = os.getcwd() +"/App/calculate.sh"+" --method="+str(2)+" --pid="+str(pid)+" --path="+path+" --list="+TagName
+        process_output = subprocess.call([command],shell=True)
+    return pd.read_csv(path)
+
+def line_graph(tagSelect):
+    global trendMap
+    global prev_tagSelection
     
-    command = os.getcwd() +"/App/calculate.sh"+" --method "+str(2)+" --pid "+str(pid)+" --path "+path+" --tagList "+Taglist
-    process_output = subprocess.call([command],shell=True)
+    
+    d = {'Year': [], 'count': []}
+    df = pd.DataFrame(data=d)
+    if not prev_tagSelection and not tagSelect:
+        print("no value",prev_tagSelection,tagSelect)
+        return go.Figure(data=[go.Scatter(x=[], y=[])])
+    if prev_tagSelection==tagSelect:
+        
+        return trendMap[tuple(prev_tagSelection)]
+    
+    for idx,tagName in enumerate(tagSelect):
+        if idx==0:
+            df = getYearList(tagName)
+            print("first df",df.head())
+            df = df.drop(columns=['Tags','Unnamed: 0'])
+            df = df.rename(columns={"count": tagName+"_count"})
+        else:
+            print(idx,"following df",df.head())
+            tmp = getYearList(tagName)
+            tmp = tmp.drop(columns=['Tags','Unnamed: 0'])
+            tmp = tmp.rename(columns={"count": tagName+"_count"})
+            df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
+        print(idx,df.head())
+    
+    print("finish merging")
+    y_val = [tag+"_count" for tag in tagSelect]
+    
+    fig = px.line(df, x="Year", y=y_val)
+    fig.update_traces(mode='markers+lines')
+    fig.update_layout(margin={'l': 10, 'b': 50, 't': 10, 'r': 0}, hovermode='closest')
+        
+    TagName2trendMap[tuple(tagSelect)] = df
+    prev_tagSelection = tagSelect
+    trendMap[tuple(prev_tagSelection)] = fig
+    return fig
 
 previous_year = None
 
@@ -72,7 +117,7 @@ edgeMap = {}
 nodeMap = {}
 
 def network_graph(yearRange,tagSelect,filterNumber=3000):
-    print(tagSelect)
+    #print(tagSelect)
     """
     tag      count     
     [1]      500
@@ -120,27 +165,23 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     node_dict = {}
     edge_dict ={}
     for index, row in Edge.iterrows():
-        #if row['Original_Tags']==tagSelect:
-        #print(row['Original_Tags'],tagSelect)
         if row['YearTagCount']>int(filterNumber):
             node_dict[row['Original_Tags']] = row['YearTagCount']
             edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
             if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
                 selectEdge.add(row['Original_Tags'])
                 selectNode.add(row['Tags'])
+#                 for tag in row['Original_Tags'].split(','):
+#                     selectNode.add(tag)
             
             
-        
+    maxNode_size = -float('inf')    
     for index, row in Node.iterrows():
         if row['singleTagCount']>int(filterNumber):
             node_dict[row['Tags']] = row['singleTagCount']
             if row['Tags'] in tagSelect:
                 selectNode.add(row['Tags'])
-    maxNode_size = -float('inf')
     
-    
-    print(len(selectEdge),len(selectNode))
-   
     
     for key,val in node_dict.items():
         G.add_node(key, size=val)
@@ -150,7 +191,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
         
     
-    #pos = nx.drawing.layout.random_layout(G)
+    
     pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
     for node in G.nodes:
         G.nodes[node]['pos'] = list(pos[node])
@@ -241,6 +282,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     
     if len(selectEdge)!=0 or len(selectNode)!=0:
         print("select mode")
+        
         figure = {
         "data": traceRecode_select,
         "layout": go.Layout( showlegend=False, hovermode='closest',
@@ -289,7 +331,7 @@ app.layout = html.Div([
            
             ############################################middle graph component
             html.Div(
-                className="eight columns",
+                className="seven columns",
                 children=[dcc.Graph(id="my-graph",
                                     figure=network_graph(YEAR,tagSelection ,filterNumber)),
                          
@@ -341,7 +383,7 @@ app.layout = html.Div([
                     ),
                     
                     html.Div(
-                        className="twelve columns",
+                        className="two columns",
                         children=[
                             dcc.RangeSlider(
                                 id='my-range-slider',
@@ -366,32 +408,22 @@ app.layout = html.Div([
                                 }
                             ),
                             html.Br(),
-                            html.Div(id='output-container-range-slider')
+                            #html.Div(id='output-container-range-slider')
                         ],
-                        style={'height': '300px','width':'400px'}
+                        style={'display': 'inline-block','height': '100px','width':'400px'}
                     ),
                     
                     html.Div(
-                    [
+                    className="two columns",
+                    children=[
                         
-                        dcc.Graph(
-                            id="Tag Count",
-                            figure=dict(
-                                layout=dict(
-#                                     plot_bgcolor=app_color["graph_bg"],
-#                                     paper_bgcolor=app_color["graph_bg"],
-                                )
-                            ),
-                        ),
-                        dcc.Interval(
-                            id="wind-speed-update",
-                            interval=100,
-                            n_intervals=0,
-                        ),
+                       dcc.Graph(id='tag-trend',figure=line_graph(tagSelection)),
+                      
                     ],
-                    className="two-thirds column wind__speed__container",
-                )
-                   
+                        
+                   style = {'display': 'inline-block', 'width':'700px'}
+                ),
+                     
                 ]
             )
         ]
@@ -435,9 +467,25 @@ def update_options(selectedData, value):
             value.remove(data)
         else:
             value.append(data)
+           
     return value
 
+@app.callback(
+    dash.dependencies.Output('tag-trend', 'figure'),
+    [dash.dependencies.Input('my-graph', 'selectedData'),
+    dash.dependencies.State('tagSelect', 'value')])
+def update_trend(selectedData, value):
+    if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
+        data = selectedData["points"][0]["hovertext"].split('<')[0]
+        if data in value:
+            value.remove(data)
+        else:
+            value.append(data)
+           
+    return line_graph(value)
 
+
+    
 if __name__ == '__main__':
         #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
     
