@@ -19,6 +19,10 @@ import numpy as np
 
 from s3fs.core import S3FileSystem
 from pyarrow.parquet import ParquetDataset
+import psycopg2 as pg
+import pandas.io.sql as psql
+from App.DataModel import *
+from s3_to_spark.configFile import *
 """
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -28,10 +32,21 @@ from pyspark.sql.types import *
 from s3_to_spark.Calculation import CalculateRangeYearTagCount2,CalculateSingleTagCount
 """
 
+
+
 # import the css template, and pass the css template into dash
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = "Stack Overflow Network"
+
+conf = config()
+param_dic = {
+"host" : conf.host_ip,
+"database" : conf.database,
+"user" : conf.username,
+"password" : conf.password
+}
+
 
 YEAR=[2010, 2019]
 filterNumber = 3000
@@ -57,6 +72,30 @@ for index, row in Edge.iterrows():
     
 #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
 
+def generateQueryWithTag(Tags,beginYear,endYear):
+    tags = ["'"+word+"'" for word in Tags.split(',')]
+    tags = ','.join(tags)
+
+    return  f'SELECT "DisplayName" ,"UserId",SUM("User_count_per_tag")\
+             FROM (SELECT *\
+              FROM activeuserstable\
+              WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "Tags" = ARRAY[{tags}]::text[]) AS F\
+             GROUP BY "DisplayName","UserId"\
+             ORDER BY SUM("User_count_per_tag") DESC\
+             limit 10'
+
+def readDataFromPSQL(query):
+#     conf = config()
+#     print(conf.password)
+#     connection = pg.connect(f'host={conf.host_ip}, dbname={conf.database}, user={conf.username}, password={conf.password}')
+#     dataframe = psql.read_sql(cmd, connection)
+#     print(dataframe.head())
+    
+    
+    conn = connectWithDatabase(param_dic)
+    cursor = conn.cursor()
+    return getInsertData(cursor,query)
+
 
 def getYearList(TagName):
     global TagName2trendMap
@@ -77,6 +116,7 @@ def line_graph(tagSelect):
     
     d = {'Year': [], 'count': []}
     df = pd.DataFrame(data=d)
+    y_val = ["count"]
     if not prev_tagSelection and not tagSelect:
         print("no value",prev_tagSelection,tagSelect)
         return go.Figure(data=[go.Scatter(x=[], y=[])])
@@ -98,8 +138,8 @@ def line_graph(tagSelect):
             df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
         print(idx,df.head())
     
-    
-    y_val = [tag+"_count" for tag in tagSelect]
+    if tagSelect:
+        y_val = [tag+"_count" for tag in tagSelect]
     print("finish merging",y_val)
     fig = px.line(df, x="Year", y=y_val)
     fig.update_traces(mode='markers+lines')
@@ -335,7 +375,7 @@ app.layout = html.Div([
            
             ############################################middle graph component
             html.Div(
-                className="seven columns",
+                className="six columns",
                 children=[dcc.Graph(id="my-graph",
                                     figure=network_graph(YEAR,tagSelection ,filterNumber)),
                          
@@ -459,12 +499,18 @@ def update_output(value,tagSelection,filterNum):
 # def display_click_data(clickData):
 #     return json.dumps(clickData, indent=2)
 
+#     Tags = 'javascript'
+#     BeginYear = '2008'
+#     EndYear = '2020'   
+#     query = generateQueryWithTag(Tags,BeginYear,EndYear)
+#     data = readDataFromPSQL(query)
 
 @app.callback(
     dash.dependencies.Output('tagSelect', 'value'),
     [dash.dependencies.Input('my-graph', 'selectedData'),
     dash.dependencies.State('tagSelect', 'value')])
 def update_options(selectedData, value):
+    print(selectedData,value)
     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
         data = selectedData["points"][0]["hovertext"].split('<')[0]
         if data in value:
@@ -512,3 +558,11 @@ if __name__ == '__main__':
     host = socket.gethostbyname(socket.gethostname())
     print(host)
     app.run_server(debug=True, host=host, port = 4444)
+    
+    
+ 
+    
+
+#     print(data)
+    
+    
