@@ -397,7 +397,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000,ActiveUserShowChosen=Fal
                 trace_select = go.Scatter(x=tuple([x0, x1, None]), y=tuple([y0, y1, None]),
                                mode='lines',
                                line={'width': weight},
-                               marker=dict(color=colors[index]),
+                               marker=dict(color='LIGHTCORAL'),
                                text=[],
                                hovertext=[],
                                line_shape='spline',
@@ -693,7 +693,7 @@ def update_options(selectedData, value):
     
     dash.dependencies.Input('tagSelect', 'value'))
 def update_trend( value):
-
+    print("update trend",value)
     return line_graph(value)
 
 
@@ -704,7 +704,7 @@ if __name__ == '__main__':
     #app.run_server(debug=True)
     import socket
     host = socket.gethostbyname(socket.gethostname())
-    app.run_server(debug=False, host=host, port = 4444)
+    app.run_server(debug=True, host=host, port = 4444)
     
     
  
