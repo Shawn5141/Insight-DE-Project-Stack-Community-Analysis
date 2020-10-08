@@ -156,6 +156,70 @@ yearMap = set()
 edgeMap = {}
 nodeMap = {}
 
+def getNodeAndEdgeInPandas(yearRange):
+        #global previous_year
+        global yearMap
+        global edgeMap
+        global nodeMap
+        yearRange= tuple(yearRange)
+        if yearRange not in yearMap:
+            print("not in yearMap",yearRange)
+        #     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
+        #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str("300")
+        #     process_output = subprocess.call([command],shell=True)
+        #     print("after process")
+            path = "/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/"
+            prefix = str(yearRange[0])+str(yearRange[1])
+            EdgePath = path+prefix+"edge.csv"
+            NodePath = path+prefix+"singleTagCount.csv"
+            Edge = pd.read_csv(EdgePath)
+            Node = pd.read_csv(NodePath)
+            #previous_year = yearRange
+            yearMap.add(yearRange)
+            edgeMap[yearRange] = Edge
+            nodeMap[yearRange] = Node
+        else:
+            Edge = edgeMap[yearRange]
+            Node = nodeMap[yearRange]
+        return Edge,Node
+    
+def filterNodeAndEdge(filterNumber,tagSelect,Node,Edge):
+        selectEdge = set()
+        selectNode = set() 
+        node_dict = {}
+        edge_dict ={}
+        
+        for index, row in Edge.iterrows():
+            if row['YearTagCount']>int(filterNumber):
+                node_dict[row['Original_Tags']] = row['YearTagCount']
+                edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
+                if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
+                    selectEdge.add(row['Original_Tags'])
+                    selectNode.add(row['Tags'])
+    #                 for tag in row['Original_Tags'].split(','):
+    #                     selectNode.add(tag)
+        for index, row in Node.iterrows():
+            if row['singleTagCount']>int(filterNumber):
+                node_dict[row['Tags']] = row['singleTagCount']
+                if row['Tags'] in tagSelect:
+                    selectNode.add(row['Tags'])
+        return node_dict,edge_dict,selectEdge,selectNode
+def createGraph(node_dict,edge_dict):
+        
+        G= nx.MultiDiGraph()
+        maxNode_size = -float('inf')    
+        for key,val in node_dict.items():
+            G.add_node(key, size=val)
+            maxNode_size = max(maxNode_size,val)
+
+        for key,val in edge_dict.items():
+            G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
+
+        pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
+        for node in G.nodes:
+            G.nodes[node]['pos'] = list(pos[node])
+        return G,pos,maxNode_size
+
 def network_graph(yearRange,tagSelect,filterNumber=3000):
     print("network begin",yearRange,tagSelect,filterNumber)
     """
@@ -173,73 +237,12 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     
     """
     
-
-    #global previous_year
-    global yearMap
-    global edgeMap
-    global nodeMap
-    yearRange= tuple(yearRange)
-    if yearRange not in yearMap:
-        print("not in yearMap",yearRange)
-    #     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
-    #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str("300")
-    #     process_output = subprocess.call([command],shell=True)
-    #     print("after process")
-        path = "/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/"
-        prefix = str(yearRange[0])+str(yearRange[1])
-        EdgePath = path+prefix+"edge.csv"
-        NodePath = path+prefix+"singleTagCount.csv"
-        Edge = pd.read_csv(EdgePath)
-        Node = pd.read_csv(NodePath)
-        #previous_year = yearRange
-        yearMap.add(yearRange)
-        edgeMap[yearRange] = Edge
-        nodeMap[yearRange] = Node
-    else:
-        Edge = edgeMap[yearRange]
-        Node = nodeMap[yearRange]
-    
-    # for select tag display
-    selectEdge = set()
-    selectNode = set()    
-    G= nx.MultiDiGraph()
-    
-    #G = nx.random_geometric_graph(200, 0.125) 
-    node_dict = {}
-    edge_dict ={}
-    for index, row in Edge.iterrows():
-        if row['YearTagCount']>int(filterNumber):
-            node_dict[row['Original_Tags']] = row['YearTagCount']
-            edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
-            if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
-                selectEdge.add(row['Original_Tags'])
-                selectNode.add(row['Tags'])
-#                 for tag in row['Original_Tags'].split(','):
-#                     selectNode.add(tag)
-            
-            
-    maxNode_size = -float('inf')    
-    for index, row in Node.iterrows():
-        if row['singleTagCount']>int(filterNumber):
-            node_dict[row['Tags']] = row['singleTagCount']
-            if row['Tags'] in tagSelect:
-                selectNode.add(row['Tags'])
-    
-    
-    for key,val in node_dict.items():
-        G.add_node(key, size=val)
-        maxNode_size = max(maxNode_size,val)
-        
-    for key,val in edge_dict.items():
-        G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
-        
-    
-    
-    pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
-    for node in G.nodes:
-        G.nodes[node]['pos'] = list(pos[node])
-        
-    
+    #Generate node based on year select in pandas format
+    Edge,Node = getNodeAndEdgeInPandas(yearRange)
+    #add selected node and edge into node dict and edge dict
+    node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(filterNumber,tagSelect,Node,Edge)
+    #create graph based on dictionary
+    G,pos,maxNode_size = createGraph(node_dict,edge_dict)
     
     colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
     colors = ['rgb' + str(x.rgb) for x in colors]
@@ -401,6 +404,8 @@ app.layout = html.Div([
                             ],
                             style={'height': '300px'}
                         )
+                          
+                          
                          
                          ],
             ),
@@ -474,6 +479,10 @@ app.layout = html.Div([
     )
 ])
 
+
+
+
+
 ###################################callback for left side components
 @app.callback(
     dash.dependencies.Output('my-graph', 'figure'),
@@ -534,11 +543,12 @@ def update_trend(selectedData, value):
            
     return line_graph(value)
 
+#
 
 # @app.callback(
 #     dash.dependencies.Output('tag-trend', 'figure'),
-#     [dash.dependencies.Input('tagSelect', 'value'),
-#     dash.dependencies.State('my-graph', 'selectedData')])
+#     [dash.dependencies.Input('my-range-slider', 'value'),
+#     dash.dependencies.Input('my-graph', 'selectedData'),dash.dependencies.State('tagSelect', 'value')])
 # def update_trend_using_dropDown(value,selectedData):
 # #     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
 # #         data = selectedData["points"][0]["hovertext"].split('<')[0]
