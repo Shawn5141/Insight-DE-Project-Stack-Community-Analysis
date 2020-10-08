@@ -16,6 +16,6 @@ spark-submit \
 --executor-memory 10G \
 --driver-memory 2g \
 --py-files ./s3_to_spark/Calculation.py \
-./App/userCommand.py $beginYear $endYear $filterNumber
+./App/userCommand.py $@
 
 echo "finsih" 

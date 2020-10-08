@@ -49,7 +49,7 @@ param_dic = {
 
 
 YEAR=[2010, 2019]
-filterNumber = 3000
+filterNumber = 8000
 ACCOUNT="A0001"
 tagSelection = []
 prev_tagSelection =[]
@@ -105,7 +105,7 @@ def getYearList(TagName):
     fileName = '_'.join([e for e in TagName.split(',')])
     path = os.getcwd()+'/App/tmp'+"/"+fileName+"_yearTagCount.csv"
     if not os.path.isfile(path):
-        command = os.getcwd() +"/App/calculate.sh"+" --method="+str(2)+" --pid="+str(pid)+" --path="+path+" --list="+TagName
+        command = os.getcwd() +"/App/calculate.sh"+" --method="+str(2)+" --path="+path+" --list="+TagName
         process_output = subprocess.call([command],shell=True)
     return pd.read_csv(path)
 
@@ -196,8 +196,8 @@ def filterNodeAndEdge(filterNumber,tagSelect,Node,Edge):
                 if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
                     selectEdge.add(row['Original_Tags'])
                     selectNode.add(row['Tags'])
-    #                 for tag in row['Original_Tags'].split(','):
-    #                     selectNode.add(tag)
+                    for tag in row['Original_Tags'].split(','):
+                        selectNode.add(tag)
         for index, row in Node.iterrows():
             if row['singleTagCount']>int(filterNumber):
                 node_dict[row['Tags']] = row['singleTagCount']
@@ -220,7 +220,7 @@ def createGraph(node_dict,edge_dict):
             G.nodes[node]['pos'] = list(pos[node])
         return G,pos,maxNode_size
 
-def network_graph(yearRange,tagSelect,filterNumber=3000):
+def network_graph(yearRange,tagSelect,filterNumber=8000):
     print("network begin",yearRange,tagSelect,filterNumber)
     """
     tag      count     
@@ -243,16 +243,19 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(filterNumber,tagSelect,Node,Edge)
     #create graph based on dictionary
     G,pos,maxNode_size = createGraph(node_dict,edge_dict)
-    
     colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
     colors = ['rgb' + str(x.rgb) for x in colors]
     traceRecode = []  # contains edge_trace, node_trace, middle_node_trace
     traceRecode_select = [] # for select tag display
+    
+    #def generateEdge(G,Edge,colors,traceRecode,traceRecode_select,selectEdge):
+
+
     index = 0
     for edge in G.edges:
         x0, y0 = G.nodes[edge[0]]['pos']
         x1, y1 = G.nodes[edge[1]]['pos']
-        
+
         weight=G.edges[edge]['weight']/ max(Edge['YearTagCount'])*10
         trace = go.Scatter(x=tuple([x0, x1, None]), y=tuple([y0, y1, None]),
                            mode='lines',
@@ -262,17 +265,18 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
                            hovertext=[],
                            line_shape='spline',
                            opacity=0.6)
-        
+
         trace['text']+= tuple([None])
         trace['hovertext']+= tuple([edge])
         traceRecode.append(trace)
         for e in edge:
             if e in selectEdge:
-            
-                trace_select = trace
 
+                trace_select = trace
+                if e in tagSelect:
+                    selectNode.add(e) # middle node add name
             else:
-                
+
                 trace_select = go.Scatter(x=tuple([x0, x1, None]), y=tuple([y0, y1, None]),
                                mode='lines',
                                line={'width': weight},
@@ -284,15 +288,15 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
             if trace_select not in traceRecode_select:
                 traceRecode_select.append(trace_select)
         index = index + 1
-       
-    
+            #return traceRecode,traceRecode_select
+    #traceRecode,traceRecode_select= generateEdge(G,Edge,colors,traceRecode,traceRecode_select,selectEdge)
 
     index = 0
     node_list = list(node_dict.items())
     for node in G.nodes():
         node_trace = go.Scatter(x=[], y=[],text=[], hovertext=[], mode='markers+text', textposition="bottom center",
                             hoverinfo="text", marker={'size': 100,'color': 'LightSkyBlue'})
-        
+        #print("create new trace",node_trace)
         x, y = G.nodes[node]['pos']
         text = node_list[index][0]
         node_trace['x'] += tuple([x])
@@ -300,7 +304,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         hovertext = text+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
         node_trace['hovertext'] += tuple([hovertext])
         node_trace['marker']['size']=G.nodes[node]['size']/maxNode_size*50
-        if G.nodes[node]['size']>int(filterNumber):
+        if G.nodes[node]['size']>int(filterNumber) or node in tagSelect:
             node_trace['text'] += tuple([text])
         else:
             node_trace['text'] +=tuple([None])
@@ -309,9 +313,14 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         
         index = index + 1
         if node in selectNode:
-            node_trace['marker']['color'] = 'GOLDENROD'
+            node_trace['text'] += tuple([text])
+            print("node trace ",node_trace['text'])
+            if node in tagSelect:
+                node_trace['marker']['color'] = 'GOLDENROD'
+            else:
+                node_trace['marker']['color'] ='LightSkyBlue'
             trace_select = node_trace
-            print("node",node,trace_select)
+            #print("node",node,trace_select)
             
         else:
             #print("not in select node node",node)
@@ -425,7 +434,7 @@ app.layout = html.Div([
                         children=[
                         dcc.Input(
                             id="filterNum",
-                            value=3000,
+                            value=8000,
                             placeholder="input filter Number",
 
                         )]
