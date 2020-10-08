@@ -49,7 +49,7 @@ param_dic = {
 
 
 YEAR=[2010, 2019]
-filterNumber = 8000
+filterNumber = 3000
 ACCOUNT="A0001"
 tagSelection = []
 prev_tagSelection =[]
@@ -114,9 +114,7 @@ def line_graph(tagSelect):
     global prev_tagSelection
     
     
-    d = {'Year': [], 'count': []}
-    df = pd.DataFrame(data=d)
-    y_val = ["count"]
+    
     if not prev_tagSelection and not tagSelect:
         print("no value",prev_tagSelection,tagSelect)
         return go.Figure(data=[go.Scatter(x=[], y=[])])
@@ -124,6 +122,7 @@ def line_graph(tagSelect):
         print("prev equal to curr",prev_tagSelection)
         return trendMap[tuple(prev_tagSelection)]
     print("curr",tagSelect)
+    print("where are you")
     for idx,tagName in enumerate(tagSelect):
         if idx==0:
             df = getYearList(tagName)
@@ -138,16 +137,19 @@ def line_graph(tagSelect):
             df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
         print(idx,df.head())
     
-    if tagSelect:
-        y_val = [tag+"_count" for tag in tagSelect]
-    print("finish merging",y_val)
+    if not tagSelect:
+        fig = go.Figure(data=[go.Scatter(x=[], y=[])])
+        return fig
+    y_val = [tag+"_count" for tag in tagSelect]
     fig = px.line(df, x="Year", y=y_val)
+    print("finish merging",y_val,"tag select",tagSelect)
     fig.update_traces(mode='markers+lines')
     fig.update_layout(margin={'l': 10, 'b': 50, 't': 10, 'r': 0}, hovermode='closest')
         
     TagName2trendMap[tuple(tagSelect)] = df
     prev_tagSelection = tagSelect
     trendMap[tuple(prev_tagSelection)] = fig
+    
     return fig
 
 previous_year = None
@@ -220,7 +222,7 @@ def createGraph(node_dict,edge_dict):
             G.nodes[node]['pos'] = list(pos[node])
         return G,pos,maxNode_size
 
-def network_graph(yearRange,tagSelect,filterNumber=8000):
+def network_graph(yearRange,tagSelect,filterNumber=3000):
     print("network begin",yearRange,tagSelect,filterNumber)
     """
     tag      count     
@@ -243,7 +245,7 @@ def network_graph(yearRange,tagSelect,filterNumber=8000):
     node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(filterNumber,tagSelect,Node,Edge)
     #create graph based on dictionary
     G,pos,maxNode_size = createGraph(node_dict,edge_dict)
-    colors = list(Color('lightcoral').range_to(Color('darkred'), len(G.edges())))
+    colors = list(Color('lightcoral').range_to(Color('darkred'), max(len(G.edges()),1)))
     colors = ['rgb' + str(x.rgb) for x in colors]
     traceRecode = []  # contains edge_trace, node_trace, middle_node_trace
     traceRecode_select = [] # for select tag display
@@ -408,6 +410,7 @@ app.layout = html.Div([
                             options=nodeOption,
                             multi=True,
                             value=[],
+                            
                             className="dcc_control",
                         ),
                             ],
@@ -434,7 +437,7 @@ app.layout = html.Div([
                         children=[
                         dcc.Input(
                             id="filterNum",
-                            value=8000,
+                            value=3000,
                             placeholder="input filter Number",
 
                         )]
@@ -495,12 +498,13 @@ app.layout = html.Div([
 ###################################callback for left side components
 @app.callback(
     dash.dependencies.Output('my-graph', 'figure'),
-    [dash.dependencies.Input('my-range-slider', 'value'),dash.dependencies.Input('tagSelect', 'value') ,dash.dependencies.Input('filterNum', 'value')])
-def update_output(value,tagSelection,filterNum):
+    [dash.dependencies.Input('my-range-slider', 'value'),dash.dependencies.Input('tagSelect', 'value') ,dash.dependencies.Input('filterNum', 'value')],
+    [dash.dependencies.State('my-graph', 'figure')])
+def update_output(value,tagSelection,filterNum,fig_state):
     YEAR = value
     filterNumber = filterNum
     tagSelect = tagSelection
-    
+    #print("fig_state",fig_state)
     return network_graph(value,tagSelect, filterNumber)
     # to update the global variable of YEAR and ACCOUNT
 # ################################callback for right side components
@@ -528,7 +532,7 @@ def update_output(value,tagSelection,filterNum):
     [dash.dependencies.Input('my-graph', 'selectedData'),
     dash.dependencies.State('tagSelect', 'value')])
 def update_options(selectedData, value):
-    print(selectedData,value)
+    print("update_options selectedData",selectedData,value)
     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
         data = selectedData["points"][0]["hovertext"].split('<')[0]
         if data in value:
@@ -540,19 +544,37 @@ def update_options(selectedData, value):
 
 @app.callback(
     dash.dependencies.Output('tag-trend', 'figure'),
-    [dash.dependencies.Input('my-graph', 'selectedData'),
-    dash.dependencies.State('tagSelect', 'value')])
-def update_trend(selectedData, value):
-    if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
-        data = selectedData["points"][0]["hovertext"].split('<')[0]
-        if data in value:
-            value.remove(data)
-        else:
-            value.append(data)
+    
+    dash.dependencies.Input('tagSelect', 'value'))
+def update_trend( value):
+    print("update trend",value)
+#     print("selectedData",selectedData)
+#     print("value",value)
+#     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
+#         data = selectedData["points"][0]["hovertext"].split('<')[0]
+#         if data in value:
+#             value.remove(data)
+#         else:
+#             value.append(data)
            
     return line_graph(value)
 
-#
+# @app.callback(
+#     dash.dependencies.Output('tag-trend', 'figure'),
+#     [dash.dependencies.Input('my-graph', 'selectedData'),
+#     dash.dependencies.State('tagSelect', 'value')])
+# def update_trend(selectedData, value):
+#     print("selectedData",selectedData)
+#     print("value",value)
+#     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
+#         data = selectedData["points"][0]["hovertext"].split('<')[0]
+#         if data in value:
+#             value.remove(data)
+#         else:
+#             value.append(data)
+           
+#     return line_graph(value)
+
 
 # @app.callback(
 #     dash.dependencies.Output('tag-trend', 'figure'),
