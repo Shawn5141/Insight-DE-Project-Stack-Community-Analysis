@@ -212,6 +212,7 @@ def readDataFromPSQL(query):
 def getUserIfTagSelect(yearRange,tagSelect,ActiveUserShowChosen=False):
     global GolbalActiveUserMap 
     LocalActiveUserMap = {}
+    
     #print("Inside getUserIfTagSelect",ActiveUserShowChosen,yearRange,tagSelect)
     if ActiveUserShowChosen==True:
         #print("inside for loop to query for user",ActiveUserShowChosen)
@@ -224,6 +225,7 @@ def getUserIfTagSelect(yearRange,tagSelect,ActiveUserShowChosen=False):
             activeUsers = readDataFromPSQL(query)
             GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])] = activeUsers
             LocalActiveUserMap[tag] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
+            
     
     return LocalActiveUserMap
 
@@ -260,8 +262,9 @@ def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUser
     userDataMap ={}
     tag_node_dict ={} # create node based on user name and tag not appear before
     tag_edge_dict ={} # create edge between user and tags
+    UserOrderForThatTagMap ={}
     for key,val in LocalActiveUserMap.items():
-        for userData in val:
+        for i,userData in enumerate(val):
             userName,userID,TagCount = userData
             #print("\n",userName,userID,TagCount)
             query = generateQueryWithUser(userID,yearRange)
@@ -271,7 +274,7 @@ def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUser
             #tag_node_dict[userName] = data
             node_dict[userName] = TagCount
             total_node_dict[userName] =TagCount
-            
+            UserOrderForThatTagMap[userName] = i+1
             for d in data:
                 node_str = ','.join(d[0])
                 if node_str not in total_node_dict:
@@ -283,6 +286,7 @@ def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUser
                 if userName not in tag_node_dict:
                     tag_node_dict[userName] = []
                 tag_node_dict[userName].append([node_str,d[1]])
+               
                 
 #     print("tag_node_dict",tag_node_dict,"\n")
 #     print("tag_edge_dict",tag_edge_dict)
@@ -290,7 +294,7 @@ def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUser
 
 
     
-    return node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict
+    return node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict,UserOrderForThatTagMap
 
 
     
@@ -343,7 +347,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000,ActiveUserShowChosen=Fal
     LocalActiveUserMap = getUserIfTagSelect(yearRange,tagSelect,ActiveUserShowChosen)
     #add selected node and edge into node dict and edge dict
     #print("before filterNodeAndEdge",LocalActiveUserMap)
-    node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict = filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap)
+    node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict,UserOrderForThatTagMap = filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap)
     #create graph based on dictionary
     G,pos,maxNode_size = createGraph(node_dict,edge_dict,tag_node_dict,tag_edge_dict)
     colors = list(Color('lightcoral').range_to(Color('darkred'), max(len(G.edges()),1)))
@@ -445,7 +449,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000,ActiveUserShowChosen=Fal
                     
 #                 node_trace['marker']['size'] = max(30,node_trace['marker']['size'])
                 #print("user ",tag_node_dict[node])
-                hovertext = text+'<br>'
+                hovertext = text+"  Top"+str(UserOrderForThatTagMap[text])+'<br>'
                 interval = 0
                 for i,(key,val) in enumerate(tag_node_dict[node]):
                     val = str(int(val))
