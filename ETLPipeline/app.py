@@ -50,6 +50,7 @@ param_dic = {
 
 YEAR=[2010, 2019]
 filterNumber = 3000
+ActiveUserShowChosen = False
 ACCOUNT="A0001"
 tagSelection = []
 prev_tagSelection =[]
@@ -60,7 +61,8 @@ nodeDict={}
 trendMap={}
 TagName2trendMap ={}
 GolbalActiveUserMap = {}
-userDataMap = {}
+prevGraph =None
+
 for index, row in Node.iterrows():
     nodeDict[row['Tags']] = row['singleTagCount']
 
@@ -94,33 +96,33 @@ def line_graph(tagSelect):
     
     
     if not prev_tagSelection and not tagSelect:
-        print("no value",prev_tagSelection,tagSelect)
+        #print("no value",prev_tagSelection,tagSelect)
         return go.Figure(data=[go.Scatter(x=[], y=[])])
     if prev_tagSelection==tagSelect:
-        print("prev equal to curr",prev_tagSelection)
+        #print("prev equal to curr",prev_tagSelection)
         return trendMap[tuple(prev_tagSelection)]
-    print("curr",tagSelect)
-    print("where are you")
+#     print("curr",tagSelect)
+#     print("where are you")
     for idx,tagName in enumerate(tagSelect):
         if idx==0:
             df = getYearList(tagName)
-            print("first df",df.head())
+            #print("first df",df.head())
             df = df.drop(columns=['Tags','Unnamed: 0'])
             df = df.rename(columns={"count": tagName+"_count"})
         else:
-            print(idx,"following df",df.head())
+            #print(idx,"following df",df.head())
             tmp = getYearList(tagName)
             tmp = tmp.drop(columns=['Tags','Unnamed: 0'])
             tmp = tmp.rename(columns={"count": tagName+"_count"})
             df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
-        print(idx,df.head())
+        #print(idx,df.head())
     
     if not tagSelect:
         fig = go.Figure(data=[go.Scatter(x=[], y=[])])
         return fig
     y_val = [tag+"_count" for tag in tagSelect]
     fig = px.line(df, x="Year", y=y_val)
-    print("finish merging",y_val,"tag select",tagSelect)
+    #print("finish merging",y_val,"tag select",tagSelect)
     fig.update_traces(mode='markers+lines')
     fig.update_layout(margin={'l': 10, 'b': 50, 't': 10, 'r': 0}, hovermode='closest')
         
@@ -143,7 +145,7 @@ def getNodeAndEdgeInPandas(yearRange):
         global nodeMap
         yearRange= tuple(yearRange)
         if yearRange not in yearMap:
-            print("not in yearMap",yearRange)
+            #print("not in yearMap",yearRange)
         #     #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
         #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str("300")
         #     process_output = subprocess.call([command],shell=True)
@@ -167,12 +169,12 @@ def getNodeAndEdgeInPandas(yearRange):
 
 
 def generateQueryWithTag(Tags,yearRange):
-    print("generate Query",Tags,yearRange)
+    #print("generate Query",Tags,yearRange)
     BeginYear,EndYear =  yearRange[0],yearRange[1]
     tags = ["'"+word+"'" for word in Tags.split(',')]
     tags = ','.join(tags)
 
-    return  f'SELECT "DisplayName" ,"UserId",SUM("User_count_per_tag")\
+    return  f'SELECT "DisplayName" ,"UserId",SUM("User_count_per_tag")::float\
              FROM (SELECT *\
               FROM activeuserstable\
               WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "Tags" = ARRAY[{tags}]::text[]) AS F\
@@ -186,13 +188,13 @@ def generateQueryWithUser(UserId,yearRange):
 #     tags = ["'"+word+"'" for word in Tags.split(',')]
 #     tags = ','.join(tags)
 
-    return  f'SELECT "Tags",SUM("User_count_per_tag")\
+    return  f'SELECT "Tags",SUM("User_count_per_tag")::float\
              FROM (SELECT *\
               FROM activeuserstable\
               WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "UserId"={UserId} ) AS F\
              GROUP BY "Tags"\
              ORDER BY SUM("User_count_per_tag") DESC\
-             limit 5'
+             limit 3'
 
 def readDataFromPSQL(query):
 #     conf = config()
@@ -207,67 +209,94 @@ def readDataFromPSQL(query):
     return getInsertData(cursor,query)
 
 
-def getUserIfTagSelect(yearRange,tagSelect,KOL_Flag=False):
+def getUserIfTagSelect(yearRange,tagSelect,ActiveUserShowChosen=False):
     global GolbalActiveUserMap 
     LocalActiveUserMap = {}
-    print("Inside getUserIfTagSelect",KOL_Flag,yearRange,tagSelect)
-    if KOL_Flag:
+    #print("Inside getUserIfTagSelect",ActiveUserShowChosen,yearRange,tagSelect)
+    if ActiveUserShowChosen==True:
+        #print("inside for loop to query for user",ActiveUserShowChosen)
         for tag in tagSelect:
             if (tag,yearRange[0],yearRange[0]) in GolbalActiveUserMap:
-                LocalActiveUserMap[(tag,yearRange[0],yearRange[0])] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
+                LocalActiveUserMap[tag] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
                 continue
             query = generateQueryWithTag(tag,yearRange)
-            print("query in getUserIfTagSelect",query)
+            #print("query in getUserIfTagSelect",query)
             activeUsers = readDataFromPSQL(query)
             GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])] = activeUsers
-            LocalActiveUserMap[(tag,yearRange[0],yearRange[0])] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
+            LocalActiveUserMap[tag] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
     
     return LocalActiveUserMap
 
 def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap):
-    print("LocalActiveUserMap",LocalActiveUserMap)
+    #print("LocalActiveUserMap",LocalActiveUserMap)
     selectEdge = set()
-    selectNode = set() 
+    selectNode = set()
+    total_node_dict = {}
     node_dict = {}
     edge_dict ={}
-
     
-            
-    AddUserDataToEdgeAndNode(LocalActiveUserMap,yearRange)
-        
-
-
+    
     for index, row in Edge.iterrows():
+        total_node_dict[row['Original_Tags']] = row['YearTagCount']
         if row['YearTagCount']>int(filterNumber):
+            
             node_dict[row['Original_Tags']] = row['YearTagCount']
+            
             edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
             if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
                 selectEdge.add(row['Original_Tags'])
                 selectNode.add(row['Tags'])
+                
                 for tag in row['Original_Tags'].split(','):
                     selectNode.add(tag)
     for index, row in Node.iterrows():
+        total_node_dict[row['Tags']] = row['singleTagCount']
         if row['singleTagCount']>int(filterNumber):
+            
             node_dict[row['Tags']] = row['singleTagCount']
             if row['Tags'] in tagSelect:
                 selectNode.add(row['Tags'])
-    return node_dict,edge_dict,selectEdge,selectNode
 
-def AddUserDataToEdgeAndNode(LocalActiveUserMap,yearRange):
-    global userDataMap 
-    
+    userDataMap ={}
+    tag_node_dict ={} # create node based on user name and tag not appear before
+    tag_edge_dict ={} # create edge between user and tags
     for key,val in LocalActiveUserMap.items():
         for userData in val:
             userName,userID,TagCount = userData
-            print(userName,userID,TagCount)
+            #print("\n",userName,userID,TagCount)
             query = generateQueryWithUser(userID,yearRange)
             data = readDataFromPSQL(query)
-            userDataMap[(userData,yearRange[0],yearRange[1])] = data
-    
+            userDataMap[userData] = data
+            #print(data,"\n")
+            #tag_node_dict[userName] = data
+            node_dict[userName] = TagCount
+            total_node_dict[userName] =TagCount
+            
+            for d in data:
+                node_str = ','.join(d[0])
+                if node_str not in total_node_dict:
+                    node_dict[node_str] = d[1]
+                    total_node_dict[node_str] = d[1]
+                
+                edge_dict[(userName,node_str)] =d[1]
+                tag_edge_dict[(userName,node_str)] =d[1]
+                if userName not in tag_node_dict:
+                    tag_node_dict[userName] = []
+                tag_node_dict[userName].append([node_str,d[1]])
+                
+#     print("tag_node_dict",tag_node_dict,"\n")
+#     print("tag_edge_dict",tag_edge_dict)
     
 
 
-def createGraph(node_dict,edge_dict):
+    
+    return node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict
+
+
+    
+
+
+def createGraph(node_dict,edge_dict,tag_node_dict,tag_edge_dict):
         
     G= nx.MultiDiGraph()
     maxNode_size = -float('inf')    
@@ -277,14 +306,22 @@ def createGraph(node_dict,edge_dict):
 
     for key,val in edge_dict.items():
         G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
+        
+    
 
     pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
     for node in G.nodes:
         G.nodes[node]['pos'] = list(pos[node])
     return G,pos,maxNode_size
 
-def network_graph(yearRange,tagSelect,filterNumber=3000):
-    print("network begin",yearRange,tagSelect,filterNumber)
+def network_graph(yearRange,tagSelect,filterNumber=3000,ActiveUserShowChosen=False):
+    global prevGraph
+    try:
+        test=int(filterNumber)
+    except:
+        
+        return prevGraph
+    #print("network begin",yearRange,tagSelect,filterNumber)
     """
     tag      count     
     [1]      500
@@ -302,13 +339,13 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     
     #Generate node based on year select in pandas format
     Edge,Node = getNodeAndEdgeInPandas(yearRange)
-    print("before getUserIfTagSelect")
-    LocalActiveUserMap = getUserIfTagSelect(yearRange,tagSelect,True)
+    #print("before getUserIfTagSelect")
+    LocalActiveUserMap = getUserIfTagSelect(yearRange,tagSelect,ActiveUserShowChosen)
     #add selected node and edge into node dict and edge dict
-    print("before filterNodeAndEdge")
-    node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap)
+    #print("before filterNodeAndEdge",LocalActiveUserMap)
+    node_dict,edge_dict,selectEdge,selectNode,tag_node_dict,tag_edge_dict,total_node_dict = filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap)
     #create graph based on dictionary
-    G,pos,maxNode_size = createGraph(node_dict,edge_dict)
+    G,pos,maxNode_size = createGraph(node_dict,edge_dict,tag_node_dict,tag_edge_dict)
     colors = list(Color('lightcoral').range_to(Color('darkred'), max(len(G.edges()),1)))
     colors = ['rgb' + str(x.rgb) for x in colors]
     traceRecode = []  # contains edge_trace, node_trace, middle_node_trace
@@ -335,12 +372,22 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         trace['text']+= tuple([None])
         trace['hovertext']+= tuple([edge])
         traceRecode.append(trace)
+        
+        _edge = (edge[0],edge[1])
+        if _edge in tag_edge_dict:
+            trace['line']['width'] *=50
+            trace['marker'] = dict(color='PERU')
+            traceRecode_select.append(trace)
         for e in edge:
-            if e in selectEdge:
-
+            _edge = (edge[0],edge[1])
+            if _edge in tag_edge_dict:
+                continue
+            
+            if e in selectEdge :
                 trace_select = trace
                 if e in tagSelect:
                     selectNode.add(e) # middle node add name
+            
             else:
 
                 trace_select = go.Scatter(x=tuple([x0, x1, None]), y=tuple([y0, y1, None]),
@@ -358,17 +405,23 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     #traceRecode,traceRecode_select= generateEdge(G,Edge,colors,traceRecode,traceRecode_select,selectEdge)
 
     index = 0
+    
     node_list = list(node_dict.items())
     for node in G.nodes():
+        #print(node,node_dict,node_list)
         node_trace = go.Scatter(x=[], y=[],text=[], hovertext=[], mode='markers+text', textposition="bottom center",
                             hoverinfo="text", marker={'size': 100,'color': 'LightSkyBlue'})
         #print("create new trace",node_trace)
         x, y = G.nodes[node]['pos']
-        text = node_list[index][0]
+        text = node
         node_trace['x'] += tuple([x])
         node_trace['y'] += tuple([y])
-        hovertext = text+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
+        if 'size' not in G.nodes[node]:
+            G.nodes[node]['size'] = total_node_dict[node]
+            #print(node,G.nodes[node])
+        hovertext = node+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
         node_trace['hovertext'] += tuple([hovertext])
+        
         node_trace['marker']['size']=G.nodes[node]['size']/maxNode_size*50
         if G.nodes[node]['size']>int(filterNumber) or node in tagSelect:
             node_trace['text'] += tuple([text])
@@ -378,22 +431,45 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         
         
         index = index + 1
-        if node in selectNode:
+        if node in selectNode or node in tag_node_dict :
             node_trace['text'] += tuple([text])
-            print("node trace ",node_trace['text'])
+            #print("node",node,"tag_node_dict",tag_node_dict,"node trace ",node_trace['text'])
             if node in tagSelect:
                 node_trace['marker']['color'] = 'GOLDENROD'
+                
+            elif node in tag_node_dict:
+                node_trace['marker']['color'] = 'YELLOWGREEN'
+                node_trace['marker']['size'] *= 100
+                if node_trace['marker']['size']>10:
+                    node_trace['marker']['size'] = 10
+                    
+#                 node_trace['marker']['size'] = max(30,node_trace['marker']['size'])
+                #print("user ",tag_node_dict[node])
+                hovertext = text+'<br>'
+                interval = 0
+                for i,(key,val) in enumerate(tag_node_dict[node]):
+                    val = str(int(val))
+                    interval= max(interval,len(key)+len(val))
+                for i,(key,val) in enumerate(tag_node_dict[node]):
+                    val = str(int(val))
+                    space = ' '*(interval-len(key)-len(val))
+                    hovertext += 'tag'+str(i+1)+": "+key+space+'  | Num: '+val+'<br>'
+                
+                node_trace['hovertext'] = tuple([hovertext])
+                #print(node,"====",node_trace['hovertext'])
             else:
                 node_trace['marker']['color'] ='LightSkyBlue'
             trace_select = node_trace
             #print("node",node,trace_select)
-            
+       
         else:
             #print("not in select node node",node)
             trace_select = go.Scatter(x=[], y=[],text=[], hovertext=[], mode='markers+text', textposition="bottom center",
                             hoverinfo="text", marker={'size': 100,'color': 'WHITESMOKE'})
             trace_select['x'] += tuple([x])
             trace_select['y'] += tuple([y])
+            #print(node,G.nodes[node])
+            
             hovertext = text+'<br>'+'Post Num: '+str(G.nodes[node]['size'])
             trace_select['hovertext'] += tuple([hovertext])
             trace_select['marker']['size']=G.nodes[node]['size']/maxNode_size*50
@@ -402,7 +478,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
         traceRecode_select.append(trace_select)
     
     if len(selectEdge)!=0 or len(selectNode)!=0:
-        print("select mode")
+        #print("select mode")
         
         figure = {
         "data": traceRecode_select,
@@ -413,6 +489,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
                             height=600,
                             clickmode='event+select',
                             )}
+        prevGraph = figure
         return figure
  
     figure = {
@@ -425,6 +502,7 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
                             clickmode='event+select',
                             )}
     #print(figure)
+    prevGraph = figure
     return figure
         
     
@@ -454,8 +532,9 @@ app.layout = html.Div([
             ############################################middle graph component
             html.Div(
                 className="six columns",
-                children=[dcc.Graph(id="my-graph",
-                                    figure=network_graph(YEAR,tagSelection ,filterNumber)), 
+                children=[
+                    dcc.Graph(id="my-graph",
+                                    figure=network_graph(YEAR,tagSelection ,filterNumber,ActiveUserShowChosen)), 
                           html.Div(
                             className="eight columns",
                             children=[
@@ -472,17 +551,35 @@ app.layout = html.Div([
                             className="dcc_control",
                         ),
                             ],
-                            style={'height': '300px'}
-                        )
-                          
-                          
-                         
-                         ],
+                            style={'height': '100px'}
+                        ),
+                    html.Br(),
+                    dcc.RadioItems(
+                        options=[
+                                    {'label': 'Show No Active Users', 'value': 'False'},
+                                    {'label': 'Show Active Users', 'value': 'True'},
+
+                                ],
+                                value='False',
+                                labelStyle={'display': 'inline-block'},
+                                id="ActiveUser_radioitems",
+                    ) ,
+#                     html.Div(
+#                         className="six columns",
+#                          children=[
+#                             html.Pre(id='hover-data1', style=styles['pre']),
+#                          ],style={'height': '200px','width':'200px'}
+                        
+#                     ),
+                    
+                   ],
+                 
             ),
+           
 
             #########################################right side two output component
                         html.Div(
-                className="two columns",
+                className="four columns",
                 children=[
                     dcc.Markdown(d("""
                             **Time Range **
@@ -491,7 +588,7 @@ app.layout = html.Div([
                             """)),
                      
                     html.Div(
-                        className="two columns",
+                        #className="four columns",
                         children=[
                         dcc.Input(
                             id="filterNum",
@@ -527,9 +624,10 @@ app.layout = html.Div([
                                 }
                             ),
                             html.Br(),
-                            #html.Div(id='output-container-range-slider')
+                           
+                            
                         ],
-                        style={'display': 'inline-block','height': '100px','width':'400px'}
+                        style={'display': 'inline-block','height': '50px','width':'600px'}
                     ),
                     
                     html.Div(
@@ -540,7 +638,7 @@ app.layout = html.Div([
                       
                     ],
                         
-                   style = {'display': 'inline-block', 'width':'700px'}
+                   style = {'display': 'inline-block', 'width':'700px','height': '350px'}
                 ),
                      
                 ]
@@ -556,41 +654,27 @@ app.layout = html.Div([
 ###################################callback for left side components
 @app.callback(
     dash.dependencies.Output('my-graph', 'figure'),
-    [dash.dependencies.Input('my-range-slider', 'value'),dash.dependencies.Input('tagSelect', 'value') ,dash.dependencies.Input('filterNum', 'value')],
+    [dash.dependencies.Input('my-range-slider', 'value'),
+     dash.dependencies.Input('tagSelect', 'value') ,
+     dash.dependencies.Input('filterNum', 'value'),
+     dash.dependencies.Input('ActiveUser_radioitems', 'value')],
     [dash.dependencies.State('my-graph', 'figure')])
-def update_output(value,tagSelection,filterNum,fig_state):
+def update_output(value,tagSelection,filterNum,ActiveUserShowChosen,fig_state):
+    #print("ActiveUserShowChosen",ActiveUserShowChosen)
     YEAR = value
     filterNumber = filterNum
     tagSelect = tagSelection
+    ActiveUserShowChosen = True if ActiveUserShowChosen=="True" else False
     #print("fig_state",fig_state)
-    return network_graph(value,tagSelect, filterNumber)
-    # to update the global variable of YEAR and ACCOUNT
-# ################################callback for right side components
-# @app.callback(
-#     dash.dependencies.Output('hover-data', 'children'),
-#     [dash.dependencies.Input('my-graph', 'hoverData')])
-# def display_hover_data(hoverData):
-#     return json.dumps(hoverData, indent=2)
-
-
-# @app.callback(
-#     dash.dependencies.Output('click-data', 'children'),
-#     [dash.dependencies.Input('my-graph', 'clickData')])
-# def display_click_data(clickData):
-#     return json.dumps(clickData, indent=2)
-
-#     Tags = 'javascript'
-#     BeginYear = '2008'
-#     EndYear = '2020'   
-#     query = generateQueryWithTag(Tags,BeginYear,EndYear)
-#     data = readDataFromPSQL(query)
+    return network_graph(value,tagSelect, filterNumber,ActiveUserShowChosen)
+ 
 
 @app.callback(
     dash.dependencies.Output('tagSelect', 'value'),
     [dash.dependencies.Input('my-graph', 'selectedData'),
     dash.dependencies.State('tagSelect', 'value')])
 def update_options(selectedData, value):
-    print("update_options selectedData",selectedData,value)
+    #print("update_options selectedData",selectedData,value)
     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
         data = selectedData["points"][0]["hovertext"].split('<')[0]
         if data in value:
@@ -605,58 +689,18 @@ def update_options(selectedData, value):
     
     dash.dependencies.Input('tagSelect', 'value'))
 def update_trend( value):
-    print("update trend",value)
-#     print("selectedData",selectedData)
-#     print("value",value)
-#     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
-#         data = selectedData["points"][0]["hovertext"].split('<')[0]
-#         if data in value:
-#             value.remove(data)
-#         else:
-#             value.append(data)
-           
+
     return line_graph(value)
 
-# @app.callback(
-#     dash.dependencies.Output('tag-trend', 'figure'),
-#     [dash.dependencies.Input('my-graph', 'selectedData'),
-#     dash.dependencies.State('tagSelect', 'value')])
-# def update_trend(selectedData, value):
-#     print("selectedData",selectedData)
-#     print("value",value)
-#     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
-#         data = selectedData["points"][0]["hovertext"].split('<')[0]
-#         if data in value:
-#             value.remove(data)
-#         else:
-#             value.append(data)
-           
-#     return line_graph(value)
 
-
-# @app.callback(
-#     dash.dependencies.Output('tag-trend', 'figure'),
-#     [dash.dependencies.Input('my-range-slider', 'value'),
-#     dash.dependencies.Input('my-graph', 'selectedData'),dash.dependencies.State('tagSelect', 'value')])
-# def update_trend_using_dropDown(value,selectedData):
-# #     if selectedData and len(selectedData["points"])>0 and "hovertext" in selectedData["points"][0] and selectedData["points"][0]["hovertext"]:
-# #         data = selectedData["points"][0]["hovertext"].split('<')[0]
-# #         if data in value:
-# #             value.remove(data)
-# #         else:
-# #             value.append(data)
-           
-#     return line_graph(value)
     
 if __name__ == '__main__':
-        #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
-    
+      
     #network_graph(YEAR,FilterNumber)
     #app.run_server(debug=True)
     import socket
     host = socket.gethostbyname(socket.gethostname())
-    print(host)
-    app.run_server(debug=True, host=host, port = 4444)
+    app.run_server(debug=False, host=host, port = 4444)
     
     
  

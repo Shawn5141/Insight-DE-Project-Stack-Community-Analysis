@@ -42,7 +42,7 @@ def connectWithDatabase(params_dic):
     try:
         conn = psycopg2.connect(**params_dic)
 
-        print("\n\n\n=============Connection to PostgreSQL created==========", "\n\n\n\n")
+        #print("\n\n\n=============Connection to PostgreSQL created==========", "\n\n\n\n")
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         sys.exit(1) 
@@ -109,7 +109,7 @@ def getInsertData(cursor,query):
 
     cursor.execute(query)
 
-    data = cursor.all()
+    data = cursor.fetchall()
     return data
     
 def main():
