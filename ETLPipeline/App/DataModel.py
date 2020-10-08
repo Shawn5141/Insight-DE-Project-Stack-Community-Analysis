@@ -105,21 +105,13 @@ def insertToTable():
         single_insert(conn, query)
 
 
-def getInsertData(cursor):
+def getInsertData(cursor,query):
 
-    postgreSQL_select_Query = "select Id,UserId ,Class  from badges_table"
+    cursor.execute(query)
 
-    cursor.execute(postgreSQL_select_Query)
-
-    cars_records = cursor.fetchmany(2)
-
-    #print("Printing 2 rows")
-    for row in cars_records:
-        print("Id = ", row[0], )
-        print("UserId = ", row[1])
-        print("Class  = ", row[2], "\n")
-
-
+    data = cursor.all()
+    return data
+    
 def main():
     config = config()
     param_dic = {

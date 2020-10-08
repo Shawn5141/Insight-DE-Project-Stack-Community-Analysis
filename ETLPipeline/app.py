@@ -59,6 +59,8 @@ Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/singleTagCo
 nodeDict={}
 trendMap={}
 TagName2trendMap ={}
+GolbalActiveUserMap = {}
+userDataMap = {}
 for index, row in Node.iterrows():
     nodeDict[row['Tags']] = row['singleTagCount']
 
@@ -71,30 +73,6 @@ for index, row in Edge.iterrows():
     
     
 #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
-
-def generateQueryWithTag(Tags,beginYear,endYear):
-    tags = ["'"+word+"'" for word in Tags.split(',')]
-    tags = ','.join(tags)
-
-    return  f'SELECT "DisplayName" ,"UserId",SUM("User_count_per_tag")\
-             FROM (SELECT *\
-              FROM activeuserstable\
-              WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "Tags" = ARRAY[{tags}]::text[]) AS F\
-             GROUP BY "DisplayName","UserId"\
-             ORDER BY SUM("User_count_per_tag") DESC\
-             limit 10'
-
-def readDataFromPSQL(query):
-#     conf = config()
-#     print(conf.password)
-#     connection = pg.connect(f'host={conf.host_ip}, dbname={conf.database}, user={conf.username}, password={conf.password}')
-#     dataframe = psql.read_sql(cmd, connection)
-#     print(dataframe.head())
-    
-    
-    conn = connectWithDatabase(param_dic)
-    cursor = conn.cursor()
-    return getInsertData(cursor,query)
 
 
 def getYearList(TagName):
@@ -185,42 +163,125 @@ def getNodeAndEdgeInPandas(yearRange):
             Node = nodeMap[yearRange]
         return Edge,Node
     
-def filterNodeAndEdge(filterNumber,tagSelect,Node,Edge):
-        selectEdge = set()
-        selectNode = set() 
-        node_dict = {}
-        edge_dict ={}
+
+
+
+def generateQueryWithTag(Tags,yearRange):
+    print("generate Query",Tags,yearRange)
+    BeginYear,EndYear =  yearRange[0],yearRange[1]
+    tags = ["'"+word+"'" for word in Tags.split(',')]
+    tags = ','.join(tags)
+
+    return  f'SELECT "DisplayName" ,"UserId",SUM("User_count_per_tag")\
+             FROM (SELECT *\
+              FROM activeuserstable\
+              WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "Tags" = ARRAY[{tags}]::text[]) AS F\
+             GROUP BY "DisplayName","UserId"\
+             ORDER BY SUM("User_count_per_tag") DESC\
+             limit 3'
+
+def generateQueryWithUser(UserId,yearRange):
+    #print("generate Query",Tags,yearRange)
+    BeginYear,EndYear =  yearRange[0],yearRange[1]
+#     tags = ["'"+word+"'" for word in Tags.split(',')]
+#     tags = ','.join(tags)
+
+    return  f'SELECT "Tags",SUM("User_count_per_tag")\
+             FROM (SELECT *\
+              FROM activeuserstable\
+              WHERE "Year" BETWEEN {BeginYear} AND {EndYear} AND "UserId"={UserId} ) AS F\
+             GROUP BY "Tags"\
+             ORDER BY SUM("User_count_per_tag") DESC\
+             limit 5'
+
+def readDataFromPSQL(query):
+#     conf = config()
+#     print(conf.password)
+#     connection = pg.connect(f'host={conf.host_ip}, dbname={conf.database}, user={conf.username}, password={conf.password}')
+#     dataframe = psql.read_sql(cmd, connection)
+#     print(dataframe.head())
+    
+    #print("read from database",query)
+    conn = connectWithDatabase(param_dic)
+    cursor = conn.cursor()
+    return getInsertData(cursor,query)
+
+
+def getUserIfTagSelect(yearRange,tagSelect,KOL_Flag=False):
+    global GolbalActiveUserMap 
+    LocalActiveUserMap = {}
+    print("Inside getUserIfTagSelect",KOL_Flag,yearRange,tagSelect)
+    if KOL_Flag:
+        for tag in tagSelect:
+            if (tag,yearRange[0],yearRange[0]) in GolbalActiveUserMap:
+                LocalActiveUserMap[(tag,yearRange[0],yearRange[0])] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
+                continue
+            query = generateQueryWithTag(tag,yearRange)
+            print("query in getUserIfTagSelect",query)
+            activeUsers = readDataFromPSQL(query)
+            GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])] = activeUsers
+            LocalActiveUserMap[(tag,yearRange[0],yearRange[0])] = GolbalActiveUserMap[(tag,yearRange[0],yearRange[0])]
+    
+    return LocalActiveUserMap
+
+def filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap):
+    print("LocalActiveUserMap",LocalActiveUserMap)
+    selectEdge = set()
+    selectNode = set() 
+    node_dict = {}
+    edge_dict ={}
+
+    
+            
+    AddUserDataToEdgeAndNode(LocalActiveUserMap,yearRange)
         
-        for index, row in Edge.iterrows():
-            if row['YearTagCount']>int(filterNumber):
-                node_dict[row['Original_Tags']] = row['YearTagCount']
-                edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
-                if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
-                    selectEdge.add(row['Original_Tags'])
-                    selectNode.add(row['Tags'])
-                    for tag in row['Original_Tags'].split(','):
-                        selectNode.add(tag)
-        for index, row in Node.iterrows():
-            if row['singleTagCount']>int(filterNumber):
-                node_dict[row['Tags']] = row['singleTagCount']
-                if row['Tags'] in tagSelect:
-                    selectNode.add(row['Tags'])
-        return node_dict,edge_dict,selectEdge,selectNode
+
+
+    for index, row in Edge.iterrows():
+        if row['YearTagCount']>int(filterNumber):
+            node_dict[row['Original_Tags']] = row['YearTagCount']
+            edge_dict[(row['Original_Tags'],row['Tags'])] = row['YearTagCount']
+            if row['Tags'] in tagSelect or row['Original_Tags'] in tagSelect :
+                selectEdge.add(row['Original_Tags'])
+                selectNode.add(row['Tags'])
+                for tag in row['Original_Tags'].split(','):
+                    selectNode.add(tag)
+    for index, row in Node.iterrows():
+        if row['singleTagCount']>int(filterNumber):
+            node_dict[row['Tags']] = row['singleTagCount']
+            if row['Tags'] in tagSelect:
+                selectNode.add(row['Tags'])
+    return node_dict,edge_dict,selectEdge,selectNode
+
+def AddUserDataToEdgeAndNode(LocalActiveUserMap,yearRange):
+    global userDataMap 
+    
+    for key,val in LocalActiveUserMap.items():
+        for userData in val:
+            userName,userID,TagCount = userData
+            print(userName,userID,TagCount)
+            query = generateQueryWithUser(userID,yearRange)
+            data = readDataFromPSQL(query)
+            userDataMap[(userData,yearRange[0],yearRange[1])] = data
+    
+    
+
+
 def createGraph(node_dict,edge_dict):
         
-        G= nx.MultiDiGraph()
-        maxNode_size = -float('inf')    
-        for key,val in node_dict.items():
-            G.add_node(key, size=val)
-            maxNode_size = max(maxNode_size,val)
+    G= nx.MultiDiGraph()
+    maxNode_size = -float('inf')    
+    for key,val in node_dict.items():
+        G.add_node(key, size=val)
+        maxNode_size = max(maxNode_size,val)
 
-        for key,val in edge_dict.items():
-            G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
+    for key,val in edge_dict.items():
+        G.add_edge(key[0],key[1],weight=val,length=val/max(Edge['YearTagCount']))
 
-        pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
-        for node in G.nodes:
-            G.nodes[node]['pos'] = list(pos[node])
-        return G,pos,maxNode_size
+    pos = nx.spring_layout(G, k=0.2*1/np.sqrt(len(G.nodes())), iterations=20)
+    for node in G.nodes:
+        G.nodes[node]['pos'] = list(pos[node])
+    return G,pos,maxNode_size
 
 def network_graph(yearRange,tagSelect,filterNumber=3000):
     print("network begin",yearRange,tagSelect,filterNumber)
@@ -241,8 +302,11 @@ def network_graph(yearRange,tagSelect,filterNumber=3000):
     
     #Generate node based on year select in pandas format
     Edge,Node = getNodeAndEdgeInPandas(yearRange)
+    print("before getUserIfTagSelect")
+    LocalActiveUserMap = getUserIfTagSelect(yearRange,tagSelect,True)
     #add selected node and edge into node dict and edge dict
-    node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(filterNumber,tagSelect,Node,Edge)
+    print("before filterNodeAndEdge")
+    node_dict,edge_dict,selectEdge,selectNode = filterNodeAndEdge(yearRange,filterNumber,tagSelect,Node,Edge,LocalActiveUserMap)
     #create graph based on dictionary
     G,pos,maxNode_size = createGraph(node_dict,edge_dict)
     colors = list(Color('lightcoral').range_to(Color('darkred'), max(len(G.edges()),1)))
@@ -391,20 +455,14 @@ app.layout = html.Div([
             html.Div(
                 className="six columns",
                 children=[dcc.Graph(id="my-graph",
-                                    figure=network_graph(YEAR,tagSelection ,filterNumber)),
-                         
-                         
-                          
-                          
+                                    figure=network_graph(YEAR,tagSelection ,filterNumber)), 
                           html.Div(
                             className="eight columns",
                             children=[
                                 dcc.Markdown(d("""
                             **Tags To Search**
                             Input the tag to visualize.
-                            """)),
-                                
-                              
+                            """)),                   
                             dcc.Dropdown(
                             id="tagSelect",
                             options=nodeOption,
