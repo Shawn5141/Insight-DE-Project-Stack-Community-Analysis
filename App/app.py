@@ -56,8 +56,8 @@ ACCOUNT="A0001"
 tagSelection = []
 prev_tagSelection =[]
 # read from tagName
-Edge = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/edge.csv')
-Node = pd.read_csv('/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/singleTagCount.csv')
+Edge = pd.read_csv('/home/ubuntu/Stack-Community/App/tmp/edge.csv')
+Node = pd.read_csv('/home/ubuntu/Stack-Community/App/tmp/singleTagCount.csv')
 nodeDict={}
 trendMap={}
 TagName2trendMap ={}
@@ -177,7 +177,7 @@ def getNodeAndEdgeInPandas(yearRange):
         #     command = os.getcwd() +"/App/calculate.sh " + str(yearRange[0])+" "+str(yearRange[1])+" "+str("300")
         #     process_output = subprocess.call([command],shell=True)
         #     print("after process")
-            path = "/home/ubuntu/Stack-Community/ETLPipeline/App/tmp/"
+            path = "/home/ubuntu/Stack-Community/App/tmp/"
             prefix = str(yearRange[0])+str(yearRange[1])
             EdgePath = path+prefix+"edge.csv"
             NodePath = path+prefix+"singleTagCount.csv"
