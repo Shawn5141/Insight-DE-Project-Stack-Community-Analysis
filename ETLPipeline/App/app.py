@@ -7,6 +7,7 @@ import networkx as nx
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
+import numpy as np
 from colour import Color
 from datetime import datetime
 from textwrap import dedent as d
@@ -75,9 +76,20 @@ for index, row in Edge.iterrows():
     
     
 #/home/ubuntu/Stack-Community/ETLPipeline/calculate.sh
+#prefixsumyearcount
+def generateQueryForYearTag(Tags):
+    tags = ["'"+word+"'" for word in Tags.split(',')]
+    tags = ','.join(tags)
+
+    return  f'SELECT "Year", "count"\
+              FROM yeartagcount\
+              WHERE "Tags" = ARRAY[{tags}]::text[]\
+              ORDER BY "Year"'
+              
 
 
 def getYearList(TagName):
+    # generate spark sql command to parse parqeut from s3
     global TagName2trendMap
     if TagName in TagName2trendMap:
         return TagName2trendMap[TagName]
@@ -88,6 +100,20 @@ def getYearList(TagName):
         command = os.getcwd() +"/calculate.sh"+" --method="+str(2)+" --path="+path+" --list="+TagName
         process_output = subprocess.call([command],shell=True)
     return pd.read_csv(path)
+
+def getYearList2(TagName):
+    # directly manipulate with database
+    global TagName2trendMap
+    if TagName in TagName2trendMap:
+        return TagName2trendMap[TagName]
+    query = generateQueryForYearTag(TagName)
+    df = readDataFromPSQL(query)
+    tmp = {}
+    for e in df:
+        tmp[e[0]] = e[1]
+    
+    return pd.DataFrame(tmp.items(), columns=['Year', 'count'])
+   
 
 def line_graph(tagSelect):
     global trendMap
@@ -105,14 +131,15 @@ def line_graph(tagSelect):
 #     print("where are you")
     for idx,tagName in enumerate(tagSelect):
         if idx==0:
-            df = getYearList(tagName)
-            #print("first df",df.head())
-            df = df.drop(columns=['Tags','Unnamed: 0'])
+            df = getYearList2(tagName)
+            #df = df.drop(columns=['Tags','Unnamed: 0'])
+            #df = df.drop(columns=['Tags'])
             df = df.rename(columns={"count": tagName+"_count"})
         else:
             #print(idx,"following df",df.head())
-            tmp = getYearList(tagName)
-            tmp = tmp.drop(columns=['Tags','Unnamed: 0'])
+            tmp = getYearList2(tagName)
+            #tmp = tmp.drop(columns=['Tags','Unnamed: 0'])
+            #tmp = tmp.drop(columns=['Tags'])
             tmp = tmp.rename(columns={"count": tagName+"_count"})
             df = df.join(tmp.set_index('Year'),lsuffix='_left', rsuffix='_right', on='Year')
         #print(idx,df.head())
@@ -165,7 +192,6 @@ def getNodeAndEdgeInPandas(yearRange):
             Node = nodeMap[yearRange]
         return Edge,Node
     
-
 
 
 def generateQueryWithTag(Tags,yearRange):
@@ -693,7 +719,6 @@ def update_options(selectedData, value):
     
     dash.dependencies.Input('tagSelect', 'value'))
 def update_trend( value):
-    print("update trend",value)
     return line_graph(value)
 
 
@@ -705,11 +730,4 @@ if __name__ == '__main__':
     import socket
     host = socket.gethostbyname(socket.gethostname())
     app.run_server(debug=True, host=host, port = 4444)
-    
-    
- 
-    
 
-#     print(data)
-    
-    
