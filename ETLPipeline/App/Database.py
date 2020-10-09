@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 import sys
 import os
 sys.path.append(os.getcwd())
-from s3_to_spark.configFile import config
+from configFile import config
 conf = config()
 
 # follows django database settings format, replace with your own settings

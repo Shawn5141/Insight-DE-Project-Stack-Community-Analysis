@@ -11,7 +11,7 @@ import psycopg2
 import sys
 import os
 sys.path.append(os.getcwd())
-from s3_to_spark.configFile import *
+from configFile import *
 
 def copy_from_file(conn, df, table):
     """
