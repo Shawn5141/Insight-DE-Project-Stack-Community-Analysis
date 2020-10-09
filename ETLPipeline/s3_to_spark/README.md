@@ -1,1 +1,14 @@
-spark-submit --packages  org.postgresql:postgresql:42.2.0.jre8 --packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.7 --conf spark.executor.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true --conf spark.driver.extraJavaOptions=-Dcom.amazonaws.services.s3.enableV4=true  --jars spark-xml_2.11-0.6.0.jar main.py
+s3_to_spark is folder store all the process for runing batch spark job to address Stack Overflow data store at s3. Function of each program can be viewed below.
+- main.py : entrypoint of program
+- configFile.py : store all the important configuration 
+- runSpark.py   : call all the neccesary method
+- xml_converter.py : convert xml data to spark dataframe
+- TagPreprocessing.py : preprocessing tag data
+- Calculation.py: table calculation
+- dataModel.py  : method handle talking to database
+
+# How to run the process:
+
+1. Make sure you are acessing master node first.
+2. Run this command `./shell_script/start_spark.sh` at s3_to_spark folder. It will trigger spark job
+
