@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve myproject
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/Stack-Community/App
+Environment="PATH=/home/ubuntu/anaconda3/envs/spark/bin"
+ExecStart=/home/ubuntu/anaconda3/envs/spark/bin/gunicorn --workers 3 --bind unix:dash.sock -m 007 wsgi:server
+
+[Install]
+WantedBy=multi-user.target

@@ -33,6 +33,7 @@ from s3_to_spark.Calculation import CalculateRangeYearTagCount2,CalculateSingleT
 # import the css template, and pass the css template into dash
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
 app.title = "Stack Overflow Network"
 
 
@@ -231,7 +232,11 @@ def update_trend( value):
     
 if __name__ == '__main__':
       
-    import socket
-    host = socket.gethostbyname(socket.gethostname())
-    app.run_server(debug=True, host=host, port = 4444)
+    #import socket
+    #host = socket.gethostbyname(socket.gethostname())
+    #app.run_server(debug=True, host=host, port = 4444)
 
+    app.run_server(
+        port=8000,
+        host='0.0.0.0'
+    )
