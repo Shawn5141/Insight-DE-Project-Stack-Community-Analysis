@@ -252,11 +252,11 @@ def update_trend( value):
     
 if __name__ == '__main__':
       
-    import socket
-    host = socket.gethostbyname(socket.gethostname())
-    app.run_server(debug=True, host=host, port = 4444)
+#    import socket
+#    host = socket.gethostbyname(socket.gethostname())
+#    app.run_server(debug=True, host=host, port = 4444)
 
-#     app.run_server(
-#         port=8000,
-#         host='0.0.0.0'
-#     )
+     app.run_server(
+         port=8000,
+         host='0.0.0.0'
+     )
