@@ -17,3 +17,5 @@ Periodically run spark program
 
 # App
 - After installation and preprocessing. You can run the Dash App by `python app.py` in App directory. In [APP](https://github.com/Shawn5141/Stack-Community/tree/master/App), it displays the design of user interface using Dash. 
+- The UI implemented with multiple function. Descriptions are shown below 
+![UI](./img/UI.PNG)
