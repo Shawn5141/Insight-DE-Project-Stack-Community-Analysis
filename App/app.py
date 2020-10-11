@@ -102,7 +102,7 @@ app.layout = html.Div([
                                     ),
                                 html.Br(),
                                 dcc.Markdown(d("""
-                                **Active Users ** : show top 3 active user.
+                                **Active Users ** : show top 3 users who answer the most.
 
                                 """)),
                                 dcc.RadioItems(
@@ -121,11 +121,14 @@ app.layout = html.Div([
                 className="twelve columns",
                 children=[
                     dcc.Graph(id="my-graph",figure=network_graph(YEAR,tagSelection ,filterNumber,ActiveUserShowChosen)), 
-                                    
-                            ],
-                            style={'height': '100px'}
-                        ),
+                   dcc.Markdown(d("""
+                    Node & Edge size : number of tags/composite tags  used in posts
                    
+                    """)),      
+                            ],
+                            style={'height': '80px'}
+                        ),
+                    
                     
                     
                    ],
@@ -138,7 +141,7 @@ app.layout = html.Div([
                 className="four columns",
                 children=[
                     dcc.Markdown(d("""
-                            **Granularity filter ** : Select Post Number filter.
+                            **Granularity filter ** : Select Post Number for filtering.
 
                             """)),
                      
