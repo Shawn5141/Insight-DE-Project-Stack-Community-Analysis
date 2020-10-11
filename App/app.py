@@ -73,38 +73,40 @@ styles = {
 }
 
 app.layout = html.Div([
-    html.Div([html.H1("Stack Overflow Tag Network Graph")],
+    html.Div([html.H1("Stack Overflow Tag Network Analysis")],
              className="row",
              style={'textAlign': "center"}),
+    #html.Abbr("\u003F", title="Hello, I am hover-enabled helpful information."),
+    html.Br(),
     html.Div(
         className="row",
         children=[
+            
             html.Div(
                 className="six columns",
                 children=[
-                    dcc.Graph(id="my-graph",
-                                    figure=network_graph(YEAR,tagSelection ,filterNumber,ActiveUserShowChosen)), 
-                          html.Div(
+                    html.Div(
                             className="eight columns",
                             children=[
+                                 dcc.Markdown(d("""
+                                **Tags To Search**
+                                Input the tag to visualize.
+                                """)),      
+                                 dcc.Dropdown(
+                                    id="tagSelect",
+                                    options=nodeOption,
+                                    multi=True,
+                                    value=[],
+
+                                    className="dcc_control",
+                                    ),
+                                html.Br(),
                                 dcc.Markdown(d("""
-                            **Tags To Search**
-                            Input the tag to visualize.
-                            """)),                   
-                            dcc.Dropdown(
-                            id="tagSelect",
-                            options=nodeOption,
-                            multi=True,
-                            value=[],
-                            
-                            className="dcc_control",
-                        ),
-                            ],
-                            style={'height': '100px'}
-                        ),
-                    html.Br(),
-                    dcc.RadioItems(
-                        options=[
+                                **Active Users ** : show top 3 active user.
+
+                                """)),
+                                dcc.RadioItems(
+                                options=[
                                     {'label': 'Show No Active Users', 'value': 'False'},
                                     {'label': 'Show Active Users', 'value': 'True'},
 
@@ -113,6 +115,18 @@ app.layout = html.Div([
                                 labelStyle={'display': 'inline-block'},
                                 id="ActiveUser_radioitems",
                     ) ,
+                ],
+            ),
+            html.Div(
+                className="twelve columns",
+                children=[
+                    dcc.Graph(id="my-graph",figure=network_graph(YEAR,tagSelection ,filterNumber,ActiveUserShowChosen)), 
+                                    
+                            ],
+                            style={'height': '100px'}
+                        ),
+                   
+                    
                     
                    ],
                  
@@ -124,9 +138,8 @@ app.layout = html.Div([
                 className="four columns",
                 children=[
                     dcc.Markdown(d("""
-                            **Time Range **
+                            **Granularity filter ** : Select Post Number filter.
 
-                            Select Post Number filter & Year Range.
                             """)),
                      
                     html.Div(
@@ -139,10 +152,14 @@ app.layout = html.Div([
 
                         )]
                     ),
-                    
+                    html.Br(),
                     html.Div(
                         className="two columns",
                         children=[
+                            dcc.Markdown(d("""
+                            **Time Range ** : Select Year Range.
+                            
+                            """)),
                             dcc.RangeSlider(
                                 id='my-range-slider',
                                 min=2008,
@@ -232,11 +249,11 @@ def update_trend( value):
     
 if __name__ == '__main__':
       
-    #import socket
-    #host = socket.gethostbyname(socket.gethostname())
-    #app.run_server(debug=True, host=host, port = 4444)
+    import socket
+    host = socket.gethostbyname(socket.gethostname())
+    app.run_server(debug=True, host=host, port = 4444)
 
-    app.run_server(
-        port=8000,
-        host='0.0.0.0'
-    )
+#     app.run_server(
+#         port=8000,
+#         host='0.0.0.0'
+#     )
