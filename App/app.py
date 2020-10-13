@@ -73,7 +73,18 @@ styles = {
 }
 
 app.layout = html.Div([
-    html.Div([html.H1("Stack Overflow Tag Network Analysis")],
+    html.Div([html.H1("Stack Overflow Tag Network Analysis"),
+              html.Div(
+                  [
+                  html.P("Providing insight on activeness of Stack Overflow tech community based on tags usage across time"),
+                  html.A("Data source: Stack Exchange Dump", href='https://archive.org/details/stackexchange', target="_blank"),
+                  html.A(" | Github link", href='https://github.com/Shawn5141/Insight-DE-Project-Stack-Community-Analysis', target="_blank")
+                  ],
+                  style={'textAlign': "center"}
+                  
+              )
+             
+             ],
              className="row",
              style={'textAlign': "center"}),
     #html.Abbr("\u003F", title="Hello, I am hover-enabled helpful information."),
@@ -100,11 +111,17 @@ app.layout = html.Div([
 
                                     className="dcc_control",
                                     ),
-                                html.Br(),
+                                
+                                 dcc.Markdown(d("""
+                                Node & Edge size : number of tags/composite tags in posts
+
+                                """)), 
+                              
                                 dcc.Markdown(d("""
                                 **Active Users ** : show top 3 users who answer the most.
 
                                 """)),
+                                
                                 dcc.RadioItems(
                                 options=[
                                     {'label': 'Show No Active Users', 'value': 'False'},
@@ -121,10 +138,7 @@ app.layout = html.Div([
                 className="twelve columns",
                 children=[
                     dcc.Graph(id="my-graph",figure=network_graph(YEAR,tagSelection ,filterNumber,ActiveUserShowChosen)), 
-                   dcc.Markdown(d("""
-                    Node & Edge size : number of tags/composite tags  used in posts
-                   
-                    """)),      
+                       
                             ],
                             style={'height': '80px'}
                         ),
@@ -160,7 +174,7 @@ app.layout = html.Div([
                         className="two columns",
                         children=[
                             dcc.Markdown(d("""
-                            **Time Range ** : Select Year Range.
+                            **Time Range ** : Select Year Range of interest.
                             
                             """)),
                             dcc.RangeSlider(
@@ -251,12 +265,11 @@ def update_trend( value):
 
     
 if __name__ == '__main__':
-      
-#    import socket
-#    host = socket.gethostbyname(socket.gethostname())
-#    app.run_server(debug=True, host=host, port = 4444)
+    import socket
+    host = socket.gethostbyname(socket.gethostname())
+    app.run_server(debug=True, host=host, port = 4444)
 
-     app.run_server(
-         port=8000,
-         host='0.0.0.0'
-     )
+#      app.run_server(
+#          port=8000,
+#          host='0.0.0.0'
+#      )
