@@ -22,26 +22,33 @@ def RunSpark(spark):
     # Get dataframe for post, question, answers and user
     Posts = convert_Posts(spark,conf.s3file_Posts)
     Questions,Answers = Preprocess(spark,Posts)
-    Users = convert_Users(spark,conf.s3file_Users)
+    Questions = CalculateAnswerTime(Questions,Answers)
+    Questions = Questions.select("Tags","Year","AnswerTime")
+#     Users = convert_Users(spark,conf.s3file_Users)
     
-    # Generate Path to S3
-    bucket = conf.bucketparquet
-    QuestionsWithAnswerTimePath = conf.generateS3Path(bucket,"QuestionsWithAnswerTime","parquet")
-    YearTagCountPath = conf.generateS3Path(bucket,"YearTagCount","parquet")
-    ActiveUsersPath = conf.generateS3Path(bucket,"ActiveUsers","parquet")
-    prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
+#     # Generate Path to S3
+#     bucket = conf.bucketparquet
+#     QuestionsWithAnswerTimePath = conf.generateS3Path(bucket,"QuestionsWithAnswerTime","parquet")
+#     YearTagCountPath = conf.generateS3Path(bucket,"YearTagCount","parquet")
+#     ActiveUsersPath = conf.generateS3Path(bucket,"ActiveUsers","parquet")
+#     prefixSumYearCountPath = conf.generateS3Path(bucket,"prefixSumYearCount","parquet")
     
     
-    ActiveUsers=CalculateActiveUser(Questions,Answers,Users)           # calculate for once
-    WriteToParquet(ActiveUsers,ActiveUsersPath)
-    QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers)   # calculate for once
-    WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
-    yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions) # calculate for once
-    WriteToParquet(yearTagCount,YearTagCountPath)
+#     ActiveUsers=CalculateActiveUser(Questions,Answers,Users)           # calculate for once
+#     WriteToParquet(ActiveUsers,ActiveUsersPath)
+#     QuestionsWithAnswerTime = CalculateAnswerTime(Questions,Answers)   # calculate for once
+#     WriteToParquet(QuestionsWithAnswerTime,QuestionsWithAnswerTimePath)
+    #yearTagCount,prefixSumYearCount = CalculateYearTagCount(Questions) # calculate for once
+#     WriteToParquet(yearTagCount,YearTagCountPath)
     #WriteToParquet(prefixSumYearCount,prefixSumYearCountPath)
-    
-    
-    
+    #writeToJDBC(yearTagCount,"yearTagCount")
+#     QuestionsWithAnswer = ReadFromParquet(spark,QuestionsWithAnswerTimePath)
+#     QuestionsWithAnswer.show()
+    TagAnswerTimeCount = CalculatePrefixTagAnsweredTime(Questions)
+    #WriteToParquet(PrefixSumAnswerTimeCount,"PrefixSumAnswerTimeCount")
+    writeToJDBC(TagAnswerTimeCount,"TagAnswerTimeCount")
+    #YearCount,PrefixSumYearCount = CalculateYearTagCount(CalculateAnswerTime)
+    #writeToJDBC(QuestionsWithAnswerPrefixSum,"QuestionsWithAnswerPrefixSum")
     # This is for user interface
 #     beforeTable,afterTable = RangeSearchGetDataFrame(spark,prefixSumYearCountPath,2019,2020)
 #     rangeYearTagCount = CalculateRangeYearTagCount2(beforeTable,afterTable,2000) #filter number to get larger tag
@@ -66,6 +73,9 @@ def RangeSearchGetDataFrame(spark,link,startYear,endYear):
     return parquetFileBefore,parquetFileAfter
 
 
+def ReadFromParquet(spark,link):
+    parquetFile = spark.read.parquet(link)
+    return parquetFile
     
 def WriteToParquet(df,link):
     
@@ -78,7 +88,7 @@ def writeToJDBC(df,tableName):
     #df = df.na.fill(0)
     mode= "overwrite"
     df.write.jdbc(url=conf.jdbcUrl, table=tableName, mode=mode, properties=conf.connectionProperties)
-    return tableNameList
+    return tableName
 
 
       

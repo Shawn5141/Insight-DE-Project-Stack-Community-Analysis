@@ -48,6 +48,18 @@ def CalculateYearTagCount(Questions):
     PrefixSumYearCount = YearCount.withColumn('cum_sum', sum('count').over(windowval)).drop('count')
     PrefixSumYearCount.show()
     return YearCount,PrefixSumYearCount
+
+def CalculatePrefixTagAnsweredTime(Questions):
+    # Calculate for once
+    
+    cols = ["Tags","Year"]
+    w = Window.partitionBy(cols)
+    YearCount = Questions.select("Tags","Year","AnswerTime").withColumn("AnswerTimeSum", avg("AnswerTime").over(w)).orderBy("Year").dropDuplicates(["Tags","Year"]).drop('Month')
+    return YearCount
+#     windowval = (Window.partitionBy('Tags').orderBy('Year').rangeBetween(Window.unboundedPreceding, 0))
+#     PrefixSumYearCount = YearCount.withColumn('AnswerTime_cum_sum', sum('AnswerTimeSum').over(windowval)).drop('AnswerTimeSum').select("Tags","Year","AnswerTime_cum_sum")
+    
+    #return YearCount,PrefixSumYearCount
     
 def CalculateRangeYearTagCount(PrefixSumYearCount,BeginYear,EndYear):
     # Calculate based on precompute table

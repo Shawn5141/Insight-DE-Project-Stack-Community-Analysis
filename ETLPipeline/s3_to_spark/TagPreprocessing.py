@@ -12,6 +12,7 @@ def Preprocess(spark,df_Posts):
     TagSynMapping=TagDownload(spark)
     b_TagSynMapping = Broadcast(spark,TagSynMapping)
     Posts = MappingTag(b_TagSynMapping,Posts)
+    #Posts.select("Tags","mappingResult").show(30,truncate=False)
     return Posts,Answers
 
 
@@ -93,6 +94,7 @@ def SupplementTags2(spark,TagSynMapping,TagName):
 
         return udf(f)
     mapping = {entry[0]:entry[2] for entry in mapping.collect()}
+    
     b = spark.sparkContext.broadcast(mapping)
     result=result.withColumn('new_id',when(col('id').isNotNull()  ,working_fun2(b)(col('id'))).otherwise(monotonically_increasing_id()))
     result=result.drop('id','n')

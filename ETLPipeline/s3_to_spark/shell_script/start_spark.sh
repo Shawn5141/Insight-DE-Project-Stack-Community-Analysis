@@ -7,7 +7,7 @@ spark-submit \
 --driver-class-path /usr/local/spark/jars/postgresql-42.2.16.jar   --jars /usr/local/spark/jars/postgresql-42.2.16.jar \
 --total-executor-cores 24 \
 --executor-cores 4 \
---executor-memory 10G \
---driver-memory 2g \
+--executor-memory 14G \
+--driver-memory 10g \
 --py-files xml_converter.py,dataModel.py,runSpark.py,TagPreprocessing.py,Calculation.py \
 main.py
