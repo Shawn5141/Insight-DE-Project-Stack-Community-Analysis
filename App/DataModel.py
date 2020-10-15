@@ -56,6 +56,15 @@ def generateQueryForYearTag(Tags):
               WHERE "Tags" = ARRAY[{tags}]::text[]\
               ORDER BY "Year"'
 
+def generateQueryForAnswersTime(Tags):
+    tags = ["'"+word+"'" for word in Tags.split(',')]
+    tags = ','.join(tags)
+
+    return  f'SELECT "Year", "AnswerTimeSum"\
+              FROM taganswertimecount\
+              WHERE "Tags" = ARRAY[{tags}]::text[]\
+              ORDER BY "Year"'
+
 # def copy_from_file(conn, df, table):
 #     """
 #     Here we are going save the dataframe on disk as 
