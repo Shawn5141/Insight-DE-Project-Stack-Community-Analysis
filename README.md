@@ -15,13 +15,17 @@
 - Link the DNS of EC2 to public domain (Not done yet)
 
 # ETL Pipeline
-- Tech Stack
-Upload xml file downloaded from stack exchange data dump to s3. And use spark cluster to preprocessed posts data and user data. After pre-computation, the result table is stored in database which can be access by front end UI. (Ref to [ETLPipeline](https://github.com/Shawn5141/Stack-Community/tree/master/ETLPipeline)) folder.
+
+- Tech Stack:
 
 ![Tech Stack](./img/tech_stack.PNG)
+
+Upload xml file downloaded from stack exchange data dump to s3. And use spark cluster to preprocessed posts data and user data. After pre-computation, the result table is stored in database which can be access by front end UI. (Ref to [ETLPipeline](https://github.com/Shawn5141/Stack-Community/tree/master/ETLPipeline)) folder.
+
 
 
 # App
 - After installation and preprocessing. You can run the Dash App by `python app.py` in App directory. In [APP](https://github.com/Shawn5141/Stack-Community/tree/master/App), it displays the design of user interface using Dash. 
-- The UI implemented with multiple function. Descriptions are shown below 
+- The UI implemented with multiple function. Function demo refer to this [youtube vedio](https://www.youtube.com/watch?v=rGT3rbSUN10).And function descriptions are shown below in below screen shot:
+
 ![UI](./img/UI.PNG)
