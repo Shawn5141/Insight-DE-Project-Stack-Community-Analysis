@@ -26,6 +26,6 @@ Upload xml file downloaded from stack exchange data dump to s3. And use spark cl
 
 # App
 - After installation and preprocessing. You can run the Dash App by `python app.py` in App directory. In [APP](https://github.com/Shawn5141/Stack-Community/tree/master/App), it displays the design of user interface using Dash. 
-- The UI implemented with multiple function. Function demo refer to this [youtube vedio](https://www.youtube.com/watch?v=rGT3rbSUN10).And function descriptions are shown below in below screen shot:
+- The UI implemented with multiple function. Function demo refer to this [youtube vedio](https://www.youtube.com/watch?v=rGT3rbSUN10).And function descriptions are shown below:
 
 ![UI](./img/UI.PNG)
