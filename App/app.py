@@ -78,7 +78,8 @@ app.layout = html.Div([
                   [
                   html.P("Providing insight on activeness of Stack Overflow tech community based on tags usage across time"),
                   html.A("Data source: Stack Exchange Dump", href='https://archive.org/details/stackexchange', target="_blank"),
-                  html.A(" | Github link", href='https://github.com/Shawn5141/Insight-DE-Project-Stack-Community-Analysis', target="_blank")
+                  html.A(" | Github link", href='https://github.com/Shawn5141/Insight-DE-Project-Stack-Community-Analysis', target="_blank"),
+                  html.A(" | Demo vedio", href='https://www.youtube.com/watch?v=rGT3rbSUN10', target="_blank")    
                   ],
                   style={'textAlign': "center"}
                   
@@ -205,11 +206,11 @@ app.layout = html.Div([
                         ],
                         style={'display': 'inline-block','height': '50px','width':'600px'}
                     ),
-                    
+                     
                     html.Div(
                     className="two columns",
                     children=[
-                        
+                       html.Br(),
                        dcc.Graph(id='tag-trend',figure=line_graph(tagSelection)),
                       
                     ],

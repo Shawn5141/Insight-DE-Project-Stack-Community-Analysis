@@ -8,7 +8,7 @@
 
     By construct a ETL pipe line for preprocessing stack overflow data and stored in database, the network graph and trend of growth among tags group can be visualized on the Dash-based user interface that provide multiple function support analysis. This project showcased the ability of building a ETL pipeline for processing big data (250GB) and Full-stack software skill as well as data analysis.
 
-[Temp Demo website](http://insightdataengineer.online/) | [Slide](https://docs.google.com/presentation/d/1sbWKLwaT2vLml31VI6-uxXzdjK5P2kiTAZ9GfWRD1sY/edit?usp=sharing)
+[Temp Demo website](http://insightdataengineer.online/) | [Slide](https://docs.google.com/presentation/d/1sbWKLwaT2vLml31VI6-uxXzdjK5P2kiTAZ9GfWRD1sY/edit?usp=sharing) | [Demo Vedio](https://www.youtube.com/watch?v=rGT3rbSUN10)
 
 # Installation/DevOp
 - Use Ansible to provision EC2, install spark, postgres and Dash UI. (Refer to [DevOp](https://github.com/Shawn5141/Stack-Community/tree/master/DevOp) folder for further instrution)
