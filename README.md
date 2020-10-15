@@ -1,9 +1,11 @@
 # Insight Data Engineer Project
 
-PROBLEM STATEMENT
+- PROBLEM STATEMENT:
+
 Having a strong and supportive community for technology tool is one of important factor for tech company to decide whether they want to adopt this tool among all potential tools. However, there is no obvious way of finding out the activeness between one group with another.
 
-SOLUTION
+- SOLUTION:
+
 By construct a ETL pipe line for preprocessing stack overflow data and stored in database, the network graph and trend of growth among tags group can be visualized on the Dash-based user interface that provide multiple function support analysis. This project showcased the ability of constructing ETL pipeline for processing stack overflow data (250GB) and Full-stack software skill as well as provide data analysis.
 
 [Temp Demo website](http://insightdataengineer.online/) | [Slide](https://docs.google.com/presentation/d/1sbWKLwaT2vLml31VI6-uxXzdjK5P2kiTAZ9GfWRD1sY/edit?usp=sharing)
