@@ -18,7 +18,7 @@
 - Tech Stack
 Upload xml file downloaded from stack exchange data dump to s3. And use spark cluster to preprocessed posts data and user data. After pre-computation, the result table is stored in database which can be access by front end UI. (Ref to [ETLPipeline](https://github.com/Shawn5141/Stack-Community/tree/master/ETLPipeline)) folder.
 
-![Tech Stack](./img/tech stack.PNG)
+![Tech Stack](./img/tech_stack.PNG)
 
 
 # App
